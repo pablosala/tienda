@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Ver Pedidos</h1>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Usuario</th>
+            <th>Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for pedido in pedidos %}
+        <tr>
+            <td>{{ pedido.id }}</td>
+            <td>{{ pedido.usuario_id }}</td>
+            <td>{{ pedido.total }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

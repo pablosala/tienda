@@ -1,0 +1,48 @@
+/* admin_style.css */
+
+.admin-panel {
+    display: flex;
+}
+
+.sidebar {
+    width: 250px;
+    background: #343a40;
+    color: #fff;
+    min-height: 100vh;
+}
+
+.sidebar-header {
+    padding: 20px;
+    background: #6c757d;
+}
+
+.sidebar ul.components {
+    padding: 20px 0;
+    border-bottom: 1px solid #47748b;
+}
+
+.sidebar ul p {
+    color: #fff;
+    padding: 10px;
+}
+
+.sidebar ul li a {
+    padding: 10px;
+    font-size: 1.1em;
+    display: block;
+    color: #d1d1d1;
+}
+
+.sidebar ul li a:hover {
+    color: #7386d5;
+    background: #fff;
+}
+
+.content {
+    padding: 20px;
+    width: 100%;
+}
+
+.card {
+    margin-bottom: 20px;
+}

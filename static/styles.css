@@ -1,0 +1,106 @@
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    text-align: center;
+    margin: 20px 0;
+}
+
+header a {
+    display: inline-block;
+    margin: 0 15px;
+    text-decoration: none;
+    color: #000;
+    background-color: #eee;
+    padding: 10px 15px;
+    border-radius: 5px;
+}
+
+header a:hover {
+    background-color: #ddd;
+}
+
+.container {
+    margin: 0 auto;
+    padding: 0 20px;
+    max-width: 1200px;
+}
+
+.products {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+}
+
+.product-card {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px;
+    width: calc(33.333% - 40px); /* 3 items per row, minus margins */
+    text-align: left;
+    box-sizing: border-box;
+}
+
+.product-card img {
+    max-width: 100%;
+    border-radius: 8px;
+}
+
+.product-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.product-info h2 {
+    font-size: 1.5em;
+    margin: 0;
+}
+
+.product-info .price {
+    font-size: 1.2em;
+    margin: 0;
+}
+
+.product-card p {
+    font-size: 1em;
+    margin: 10px 0;
+}
+
+.product-card button {
+    background-color: #000;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 4px;
+    width: 100%;
+}
+
+.product-card button:hover {
+    background-color: #555;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+table, th, td {
+    border: 1px solid #ccc;
+}
+
+th, td {
+    padding: 10px;
+    text-align: left;
+}
+
+th {
+    background-color: #f4f4f4;
+}

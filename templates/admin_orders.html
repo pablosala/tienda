@@ -1,0 +1,36 @@
+{% extends 'admin_base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Manage Orders</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order.id }}</td>
+                <td>{{ order.usuario.nombre }}</td>
+                <td>{{ order.fecha }}</td>
+                <td>${{ order.total }}</td>
+                <td>{{ order.status }}</td>
+                <td>
+                    <a href="{{ url_for('ver_pedido', order_id=order.id) }}" class="btn btn-primary btn-sm">View</a>
+                    <form action="{{ url_for('eliminar_pedido', order_id=order.id) }}" method="post" style="display:inline-block;">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

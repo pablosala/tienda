@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Mi Carrito</h2>
+    {% if items %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.producto.nombre }}</td>
+                    <td>{{ item.cantidad }}</td>
+                    <td>${{ item.producto.precio }}</td>
+                    <td>${{ item.cantidad * item.producto.precio }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <form action="{{ url_for('realizar_pedido') }}" method="POST">
+            <button type="submit" class="btn btn-primary">Realizar Pedido</button>
+        </form>
+    {% else %}
+        <p>No tienes productos en tu carrito.</p>
+    {% endif %}
+</div>
+{% endblock %}

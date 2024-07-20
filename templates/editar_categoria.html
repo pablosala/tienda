@@ -1,0 +1,12 @@
+{% extends 'admin_base.html' %}
+
+{% block content %}
+<h2>Editar Categoría</h2>
+<form method="post">
+    <div class="form-group">
+        <label for="nombre">Nombre</label>
+        <input type="text" class="form-control" id="nombre" name="nombre" value="{{ categoria.nombre }}" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Guardar</button>
+</form>
+{% endblock %}

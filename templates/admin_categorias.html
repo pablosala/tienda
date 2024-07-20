@@ -1,0 +1,29 @@
+{% extends 'admin_base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Manage Categories</h2>
+    <a href="{{ url_for('nueva_categoria') }}" class="btn btn-primary mb-3">Add Category</a>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for categoria in categorias %}
+            <tr>
+                <td>{{ categoria.nombre }}</td>
+                <td>
+                    <a href="{{ url_for('editar_categoria', categoria_id=categoria.id) }}" class="btn btn-warning btn-sm">Edit</a>
+                    <form action="{{ url_for('eliminar_categoria', categoria_id=categoria.id) }}" method="post" style="display:inline-block;">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
