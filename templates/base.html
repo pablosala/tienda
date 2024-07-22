@@ -33,23 +33,115 @@
     <script src="{{ url_for('static', filename='js/respond.min.js') }}"></script>
     <![endif]-->
 
-    <!-- Custom CSS for Search Bar -->
+    <!-- Custom CSS -->
     <style>
+        /* Barra superior marrón claro */
+        .top-bar {
+            background-color: #D2B48C;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+
+        .top-bar a {
+            color: white;
+            margin: 0 10px;
+        }
+
+        .navbar-nav > li {
+            float: none;
+            display: inline-block;
+            position: relative;
+        }
+
+        .navbar-nav {
+            text-align: center;
+        }
+
+        .navbar-nav .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 160px;
+            padding: 5px 0;
+            margin: 2px 0 0;
+            font-size: 14px;
+            text-align: left;
+            background-color: #D2B48C;
+            border: 1px solid rgba(0, 0, 0, .15);
+            border-radius: 4px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+            display: none;
+        }
+
         .search .input-group {
             display: flex;
             align-items: center;
-            margin-top: -11px;
+            margin-top: 10px;
             margin-right: 10px;
         }
+
         .search input[type="text"] {
             flex: 1;
             border-radius: 4px 0 0 4px;
             border-right: 0;
         }
+
         .search button {
             border-radius: 0 4px 4px 0;
             margin-left: -1px;
         }
+
+        .top-bar ul {
+            display: flex;
+            justify-content: center;
+        }
+
+        .top-bar ul li {
+            display: inline-block;
+            margin: 0 15px;
+        }
+
+        /* Quitar cambio de color al pasar el cursor y al pulsarlo */
+        .navbar-nav .dropdown-toggle:focus, 
+        .navbar-nav .dropdown-toggle:hover {
+            background-color: transparent !important;
+            box-shadow: none !important;
+            color: white !important;
+        }
+
+        /* Mantener la visibilidad del menú desplegable al hacer clic */
+        .dropdown-menu.show {
+            display: block;
+        }
+            /* Style the menu-2 items */
+    .fh5co-nav .menu-2 ul {
+        display: flex;
+        justify-content: center;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        margin-block-end:auto;
+    }
+
+    .fh5co-nav .menu-2 ul li {
+        margin: 0 10px;
+        display: inline-block; /* Ensure list items are inline */
+    }
+        #fh5co-logo img {
+            max-width: 60%;
+            height: auto;
+            margin-top: -50px;
+        }
+
+        /* Estilos para dispositivos móviles */
+        @media (max-width: 767px) {
+            #fh5co-logo img {
+                max-width: 200%;
+                margin-top: -25px;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -60,40 +152,38 @@
     <nav class="fh5co-nav" role="navigation">
         <div class="container">
             <div class="row">
-                <div class="col-md-3 col-xs-2">
-                    <div id="fh5co-logo"><a href="{{ url_for('index') }}">Sala Sax</a></div>
-                </div>
+        <div class="col-md-3 col-xs-2">
+            <div id="fh5co-logo">
+                <a href="{{ url_for('index') }}">
+                    <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Sala Sax Logo">
+                </a>
+            </div>
+        </div>
+
                 <div class="col-md-6 col-xs-6 text-center menu-1">
                     <ul>
                     {% if current_user.is_authenticated and current_user.role == 'admin' %}
                         <li><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
                     {% endif %}
-                        <li class="has-dropdown">
-                            <a href="{{ url_for('index') }}">Tienda</a>
-                            <ul class="dropdown">
-                                {% for categoria in categorias %}
-                                    <li><a href="{{ url_for('categoria_productos', categoria_id=categoria.id) }}">{{ categoria.nombre }}</a></li>
-                                {% endfor %}
-                            </ul>
-                        </li>
+                    <li class="has-dropdown">
+                        <a href="{{ url_for('index') }}" id="tienda-link">Tienda</a>
+                        <ul class="dropdown">
+                            {% for categoria in categorias %}
+                                <li><a href="{{ url_for('categoria_productos', categoria_id=categoria.id) }}">{{ categoria.nombre }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+
                         <li><a href="{{ url_for('services') }}">Servicios</a></li>
                         <li><a href="{{ url_for('galeria') }}">Galería</a></li>
                         <li><a href="{{ url_for('contact') }}">Contacto</a></li>
                         <li><a href="{{ url_for('about') }}">Acerca de</a></li>
-
                     </ul>
                 </div>
                 <div class="col-md-3 col-xs-4 text-right hidden-xs menu-2">
-                    <ul>
-                        <li class="search">
-                            <form action="{{ url_for('buscar') }}" method="get" class="input-group">
-                                <input type="text" name="q" placeholder="Buscar.." class="form-control">
-                                <span class="input-group-btn">
-                                    <button class="btn btn-primary" type="submit"><i class="icon-search"></i></button>
-                                </span>
-                            </form>
-                        </li>
+                    <ul class="menu-2">
                         <li class="shopping-cart"><a href="{{ url_for('carrito') }}" class="cart"><span><small>{{ carrito_items_count }}</small><i class="icon-shopping-cart"></i></span></a></li>
+                        <li class="mi-cuenta"><a href="{{ url_for('detalles_cuenta') }}">mi cuenta</a></li>
                     </ul>
                 </div>
             </div>
@@ -181,6 +271,66 @@
 <script src="{{ url_for('static', filename='js/jquery.flexslider-min.js') }}"></script>
 <!-- Main -->
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+<script>
+$(document).ready(function(){
+    // Función para mostrar y ocultar el menú desplegable al hacer clic
+    $('.dropdown-toggle').click(function(e) {
+        e.preventDefault();
+        var $parentLi = $(this).parent();
+        $parentLi.toggleClass('open');
+        $('.dropdown-menu', $parentLi).toggleClass('show');
+    });
+
+    // Función para ocultar el menú desplegable al hacer clic fuera de él
+    $(document).click(function(event) {
+        if (!$(event.target).closest('.dropdown').length) {
+            $('.dropdown').removeClass('open');
+            $('.dropdown-menu').removeClass('show');
+        }
+    });
+
+    // Evitar que el menú se cierre al hacer clic dentro del menú desplegable
+    $('.dropdown-menu').click(function(e) {
+        e.stopPropagation();
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    var tiendaLink = document.getElementById('tienda-link');
+    var dropdown = tiendaLink.nextElementSibling;
+
+    tiendaLink.addEventListener('click', function(event) {
+        if (dropdown.style.display === 'block') {
+            dropdown.style.display = 'none';
+            event.preventDefault(); // Prevenir la redirección si el menú desplegable está visible
+        } else {
+            dropdown.style.display = 'block';
+            event.preventDefault(); // Prevenir la redirección para mostrar el menú desplegable
+        }
+    });
+
+    // Cierra el menú desplegable cuando el cursor sale de él
+    dropdown.addEventListener('mouseleave', function() {
+        setTimeout(function() {
+            if (!dropdown.matches(':hover') && !tiendaLink.matches(':hover')) {
+                dropdown.style.display = 'none';
+            }
+        }, 200);
+    });
+
+    // Cierra el menú desplegable cuando el cursor sale del enlace "Tienda"
+    tiendaLink.addEventListener('mouseleave', function() {
+        setTimeout(function() {
+            if (!dropdown.matches(':hover') && !tiendaLink.matches(':hover')) {
+                dropdown.style.display = 'none';
+            }
+        }, 200);
+    });
+});
+
+
+</script>
 
 </body>
 </html>

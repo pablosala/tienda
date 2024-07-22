@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}
+Checkout
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Checkout</h2>
+    <form method="POST" action="{{ url_for('checkout') }}">
+        <div class="form-group">
+            <label for="direccion_envio">Dirección de Envío</label>
+            <select class="form-control" id="direccion_envio" name="direccion_envio" required>
+                {% for direccion in direcciones %}
+                <option value="{{ direccion.id }}">{{ direccion.direccion }}, {{ direccion.ciudad }}, {{ direccion.provincia }}, {{ direccion.codigo_postal }}, {{ direccion.pais }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="metodo_pago">Método de Pago</label>
+            <select class="form-control" id="metodo_pago" name="metodo_pago" required>
+                {% for metodo in metodos_pago %}
+                <option value="{{ metodo.id }}">{{ metodo.tipo }} - {{ metodo.numero }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Realizar Pedido</button>
+    </form>
+</div>
+{% endblock %}

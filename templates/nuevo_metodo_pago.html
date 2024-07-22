@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}
+Añadir Nuevo Método de Pago
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Añadir Nuevo Método de Pago</h2>
+    <form method="POST" action="{{ url_for('nuevo_metodo_pago') }}">
+        <div class="form-group">
+            <label for="tipo">Tipo de Método de Pago</label>
+            <select class="form-control" id="tipo" name="tipo" required>
+                <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+                <option value="Tarjeta de Débito">Tarjeta de Débito</option>
+                <option value="PayPal">PayPal</option>
+                <!-- Añade más opciones según sea necesario -->
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="numero">Número de Tarjeta</label>
+            <input type="text" class="form-control" id="numero" name="numero" required>
+        </div>
+        <div class="form-group">
+            <label for="expiracion">Fecha de Expiración (MM/AAAA)</label>
+            <input type="text" class="form-control" id="expiracion" name="expiracion" required>
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Añadir Método de Pago</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

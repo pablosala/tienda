@@ -9,6 +9,10 @@ import mysql.connector
 from flask_migrate import Migrate
 import pytz
 from werkzeug.utils import secure_filename
+from jinja2 import Environment, FileSystemLoader
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 # Configurar la zona horaria de Madrid
 madrid_tz = pytz.timezone('Europe/Madrid')
@@ -23,6 +27,17 @@ app.config['MAX_CONTENT_PATH'] = 16 * 1024 * 1024  # 16 MB limit
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://sammy:password@localhost/tienda_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'your_secret_key'
+
+
+
+app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'your-email@gmail.com'
+app.config['MAIL_PASSWORD'] = 'your-email-password'
+app.config['MAIL_DEFAULT_SENDER'] = 'your-email@gmail.com'
+app.config['SECURITY_PASSWORD_SALT'] = 'your-password-salt'
+
 
 
 # Inicializar la base de datos
@@ -40,6 +55,10 @@ class Usuario(UserMixin, db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='user')
     ordenes = db.relationship('Orden', backref='usuario', lazy=True)
+    direcciones = db.relationship('Direccion', backref='usuario', lazy=True)
+    metodos_pago = db.relationship('MetodoPago', backref='usuario', lazy=True)
+    carrito = db.relationship('Carrito', backref='usuario', uselist=False)
+
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -47,10 +66,12 @@ class Usuario(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+
 class Categoria(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(150), nullable=False, unique=True)
     productos = db.relationship('Producto', backref='categoria', lazy=True)
+
 
 class Producto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -62,6 +83,7 @@ class Producto(db.Model):
     ordenes = db.relationship('OrdenProducto', backref='producto', lazy=True)
     imagenes = db.relationship('Imagen', backref='producto', lazy=True)
 
+
 class Imagen(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(255), nullable=False)
@@ -71,10 +93,15 @@ class Imagen(db.Model):
 class Orden(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fecha = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(madrid_tz))
+    fecha_actualizacion = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(madrid_tz), onupdate=lambda: datetime.now(madrid_tz))
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    direccion_envio_id = db.Column(db.Integer, db.ForeignKey('direccion.id'), nullable=False)
+    metodo_pago_id = db.Column(db.Integer, db.ForeignKey('metodo_pago.id'), nullable=False)
     total = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='Pending')
+    notas = db.Column(db.Text, nullable=True)
     productos = db.relationship('OrdenProducto', backref='orden', lazy=True)
+
 
 class OrdenProducto(db.Model):
     orden_id = db.Column(db.Integer, db.ForeignKey('orden.id'), primary_key=True)
@@ -82,10 +109,12 @@ class OrdenProducto(db.Model):
     cantidad = db.Column(db.Integer, nullable=False)
     precio = db.Column(db.Float, nullable=False)
 
+
 class Carrito(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     items = db.relationship('CarritoItem', backref='carrito', lazy=True)
+
 
 class CarritoItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -94,6 +123,26 @@ class CarritoItem(db.Model):
     cantidad = db.Column(db.Integer, nullable=False)
     producto = db.relationship('Producto', backref='carrito_items')
 
+
+class Direccion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(120), nullable=False)
+    direccion = db.Column(db.String(200), nullable=False)
+    ciudad = db.Column(db.String(100), nullable=False)
+    provincia = db.Column(db.String(100), nullable=False)
+    codigo_postal = db.Column(db.String(20), nullable=False)
+    pais = db.Column(db.String(100), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    ordenes = db.relationship('Orden', backref='direccion_envio', lazy=True)
+
+
+class MetodoPago(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.String(50), nullable=False)
+    numero = db.Column(db.String(20), nullable=False)
+    expiracion = db.Column(db.String(7), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    ordenes = db.relationship('Orden', backref='metodo_pago', lazy=True)
 
 
 
@@ -160,6 +209,8 @@ def logout():
 @app.route('/')
 def index():
     productos = Producto.query.all()
+    for producto in productos:
+        producto.imagen_principal = producto.imagenes[0].url if producto.imagenes else 'default.jpg'
     return render_template('index.html', productos=productos)
 
 @app.route('/about')
@@ -175,15 +226,6 @@ def galeria():
     imagenes = Imagen.query.all()  # Asumiendo que tienes un modelo Imagen
     return render_template('galeria.html', imagenes=imagenes)
 
-@app.route('/buscar', methods=['GET'])
-def buscar():
-    query = request.args.get('q', '')
-    if query:
-        productos = Producto.query.filter(Producto.nombre.like(f'%{query}%')).all()
-    else:
-        productos = []
-    return render_template('resultados_busqueda.html', productos=productos, query=query)
-
 
 @app.route('/productos')
 def productos():
@@ -195,9 +237,165 @@ def productos():
 def services():
     return render_template('services.html')
 
+
 @app.route('/single')
 def single():
     return render_template('single.html')
+
+@app.route('/detalles_cuenta', methods=['GET', 'POST'])
+@login_required
+def detalles_cuenta():
+    if request.method == 'POST':
+        current_user.nombre = request.form['nombre']
+        current_user.email = request.form['email']
+        db.session.commit()
+        flash('Tu cuenta ha sido actualizada!', 'success')
+        return redirect(url_for('detalles_cuenta'))
+    
+    ordenes = Orden.query.filter_by(usuario_id=current_user.id).all()
+    direcciones = Direccion.query.filter_by(usuario_id=current_user.id).all()
+    metodos_pago = MetodoPago.query.filter_by(usuario_id=current_user.id).all()
+    
+    return render_template('detalles_cuenta.html', title='Detalles de la cuenta', user=current_user, ordenes=ordenes, direcciones=direcciones, metodos_pago=metodos_pago)
+
+
+@app.route('/direccion/nueva', methods=['GET', 'POST'])
+@login_required
+def nueva_direccion():
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        direccion = request.form['direccion']
+        ciudad = request.form['ciudad']
+        provincia = request.form['provincia']
+        codigo_postal = request.form['codigo_postal']
+        pais = request.form['pais']
+        nueva_direccion = Direccion(nombre=nombre, direccion=direccion, ciudad=ciudad, provincia=provincia, codigo_postal=codigo_postal, pais=pais, usuario_id=current_user.id)
+        db.session.add(nueva_direccion)
+        db.session.commit()
+        flash('Dirección añadida con éxito!', 'success')
+        return redirect(url_for('detalles_cuenta'))
+    return render_template('nueva_direccion.html')
+
+@app.route('/direccion/editar/<int:direccion_id>', methods=['GET', 'POST'])
+@login_required
+def editar_direccion(direccion_id):
+    direccion = Direccion.query.get_or_404(direccion_id)
+    if request.method == 'POST':
+        direccion.nombre = request.form['nombre']
+        direccion.direccion = request.form['direccion']
+        direccion.ciudad = request.form['ciudad']
+        direccion.provincia = request.form['provincia']
+        direccion.codigo_postal = request.form['codigo_postal']
+        direccion.pais = request.form['pais']
+        db.session.commit()
+        flash('Dirección actualizada con éxito!', 'success')
+        return redirect(url_for('detalles_cuenta'))
+    return render_template('editar_direccion.html', direccion=direccion)
+
+@app.route('/direccion/eliminar/<int:direccion_id>', methods=['POST'])
+@login_required
+def eliminar_direccion(direccion_id):
+    direccion = Direccion.query.get_or_404(direccion_id)
+    db.session.delete(direccion)
+    db.session.commit()
+    flash('Dirección eliminada con éxito!', 'success')
+    return redirect(url_for('detalles_cuenta'))
+
+@app.route('/nuevo_metodo_pago', methods=['GET', 'POST'])
+@login_required
+def nuevo_metodo_pago():
+    if request.method == 'POST':
+        tipo = request.form['tipo']
+        numero = request.form['numero']
+        expiracion = request.form['expiracion']
+        
+        nuevo_metodo = MetodoPago(tipo=tipo, numero=numero, expiracion=expiracion, usuario_id=current_user.id)
+        db.session.add(nuevo_metodo)
+        db.session.commit()
+        
+        flash('Nuevo método de pago añadido con éxito', 'success')
+        return redirect(url_for('detalles_cuenta'))
+    
+    return render_template('nuevo_metodo_pago.html')
+
+
+@app.route('/metodo_pago/editar/<int:metodo_id>', methods=['GET', 'POST'])
+@login_required
+def editar_metodo_pago(metodo_id):
+    metodo = MetodoPago.query.get_or_404(metodo_id)
+    if request.method == 'POST':
+        metodo.tipo = request.form['tipo']
+        metodo.numero = request.form['numero']
+        metodo.expiracion = request.form['expiracion']
+        db.session.commit()
+        flash('Método de pago actualizado con éxito!', 'success')
+        return redirect(url_for('detalles_cuenta'))
+    return render_template('editar_metodo_pago.html', metodo=metodo)
+
+@app.route('/metodo_pago/eliminar/<int:metodo_id>', methods=['POST'])
+@login_required
+def eliminar_metodo_pago(metodo_id):
+    metodo = MetodoPago.query.get_or_404(metodo_id)
+    db.session.delete(metodo)
+    db.session.commit()
+    flash('Método de pago eliminado con éxito!', 'success')
+    return redirect(url_for('detalles_cuenta'))
+
+
+@app.route('/checkout', methods=['GET', 'POST'])
+@login_required
+def checkout():
+    usuario_id = current_user.id
+    carrito = Carrito.query.filter_by(usuario_id=usuario_id).first()
+
+    if not carrito:
+        flash('No hay productos en el carrito', 'danger')
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        direccion_envio_id = request.form['direccion_envio']
+        metodo_pago_id = request.form['metodo_pago']
+
+        # Crear un nuevo pedido
+        pedido = Orden(
+            usuario_id=usuario_id,
+            direccion_envio_id=direccion_envio_id,
+            metodo_pago_id=metodo_pago_id,
+            total=calcular_total_carrito(carrito.id)
+        )
+        db.session.add(pedido)
+        db.session.commit()
+
+        # Mover los items del carrito al pedido
+        carrito_items = CarritoItem.query.filter_by(carrito_id=carrito.id).all()
+        for item in carrito_items:
+            orden_producto = OrdenProducto(
+                orden_id=pedido.id,
+                producto_id=item.producto_id,
+                cantidad=item.cantidad,
+                precio=item.producto.precio
+            )
+            db.session.add(orden_producto)
+            db.session.delete(item)  # Eliminar los items del carrito
+        db.session.commit()
+        
+        flash('Tu pedido ha sido realizado con éxito', 'success')
+        return redirect(url_for('index'))
+    
+    direcciones = Direccion.query.filter_by(usuario_id=usuario_id).all()
+    metodos_pago = MetodoPago.query.filter_by(usuario_id=usuario_id).all()
+    carrito_items = CarritoItem.query.filter_by(carrito_id=carrito.id).all()
+    return render_template('checkout.html', title='Finalizar Compra', carrito_items=carrito_items, direcciones=direcciones, metodos_pago=metodos_pago, user=current_user)
+
+def calcular_total_carrito(carrito_id):
+    carrito_items = CarritoItem.query.filter_by(carrito_id=carrito_id).all()
+    total = sum(item.cantidad * item.producto.precio for item in carrito_items)
+    return total
+
+def calcular_total_carrito(usuario_id):
+    carrito_items = CarritoItem.query.filter_by(carrito_id=usuario_id).all()
+    total = sum(item.cantidad * item.producto.precio for item in carrito_items)
+    return total
 
 
 @app.route('/categoria/<int:categoria_id>')
@@ -208,7 +406,14 @@ def categoria_productos(categoria_id):
         producto.imagen_principal = producto.imagenes[0].url if producto.imagenes else 'default.jpg'
     return render_template('categoria_productos.html', categoria=categoria, productos=productos)
 
-
+@app.route('/buscar', methods=['GET'])
+def buscar():
+    query = request.args.get('q', '')
+    if query:
+        productos = Producto.query.filter(Producto.nombre.like(f'%{query}%')).all()
+    else:
+        productos = []
+    return render_template('resultados_busqueda.html', productos=productos, query=query)
 
 @app.context_processor
 def inject_categories():
@@ -503,6 +708,13 @@ def admin_orders():
     orders = Orden.query.all()
     return render_template('admin_orders.html', orders=orders)
 
+@app.route('/admin/correo')
+@login_required
+def admin_correo():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+    return render_template('enviar_correo.html')
+
 @app.route('/admin/usuarios')
 @login_required
 def admin_usuarios():
@@ -563,6 +775,96 @@ def admin_settings():
     return render_template('admin_settings.html')
 
 
+
+
+@app.route('/reset_password', methods=['GET', 'POST'])
+def reset_password():
+    if request.method == 'POST':
+        email = request.form['email']
+        user = Usuario.query.filter_by(email=email).first()
+        if user:
+            token = generate_confirmation_token(user.email)
+            send_reset_email(user.email, token)
+            flash('Se ha enviado un correo electrónico con instrucciones para restablecer la contraseña.', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('No se encontró una cuenta con ese correo electrónico.', 'danger')
+            return redirect(url_for('reset_password'))
+    return render_template('reset_password.html')
+
+@app.route('/reset/<token>', methods=['GET', 'POST'])
+def reset_with_token(token):
+    try:
+        email = confirm_token(token)
+    except:
+        flash('El enlace para restablecer la contraseña es inválido o ha expirado.', 'danger')
+        return redirect(url_for('reset_password'))
+
+    if request.method == 'POST':
+        password = request.form['password']
+        user = Usuario.query.filter_by(email=email).first_or_404()
+        user.password = generate_password_hash(password)
+        db.session.commit()
+        flash('Tu contraseña ha sido actualizada.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('reset_with_token.html', token=token)
+
+def generate_confirmation_token(email):
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    return serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
+
+def confirm_token(token, expiration=3600):
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    try:
+        email = serializer.loads(token, salt=app.config['SECURITY_PASSWORD_SALT'], max_age=expiration)
+    except:
+        return False
+    return email
+
+def send_reset_email(to_email, token):
+    msg = Message('Restablecer tu contraseña', sender=app.config['MAIL_DEFAULT_SENDER'], recipients=[to_email])
+    msg.body = f'To reset your password, visit the following link: {url_for("reset_with_token", token=token, _external=True)}\n\nIf you did not make this request then simply ignore this email and no changes will be made.'
+    mail.send(msg)
+
+
+
+
+
+
+
+
+
+def send_email(to_email, subject, html_content):
+    from_email = 'salasaxsolidsurface@gmail.com'  # Cambia esto a tu dirección de correo
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = from_email
+    msg['To'] = to_email
+
+    part = MIMEText(html_content, 'html')
+    msg.attach(part)
+
+    try:
+        server = smtplib.SMTP('localhost', 25)  # Conexión a Postfix en localhost
+        server.sendmail(from_email, to_email, msg.as_string())
+        server.quit()
+        print(f'Correo enviado a {to_email}')
+    except Exception as e:
+        print(f'Error al enviar correo: {e}')
+
+@app.route('/send_email_test', methods=['POST'])
+def send_email_test():
+    to_email = request.form['email']
+    nombre = request.form['nombre']
+    subject = 'Prueba de correo desde Sala Sax'
+    message = 'Este es un mensaje de prueba.'
+
+    html_content = render_template('email_template.html', nombre=nombre, subject=subject, message=message)
+    send_email(to_email, subject, html_content)
+    flash('Correo enviado con éxito', 'success')
+    return redirect(url_for('index'))
 
 
 

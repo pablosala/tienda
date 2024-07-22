@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2>Restablecer Contraseña</h2>
+  <form method="post" action="{{ url_for('reset_with_token', token=token) }}">
+      <div class="form-group row">
+          <label for="password" class="col-sm-2 col-form-label">Nueva Contraseña:</label>
+          <div class="col-sm-10">
+              <input type="password" class="form-control" id="password" name="password" required>
+          </div>
+      </div>
+      <div class="form-group row">
+          <div class="col-sm-10 offset-sm-2">
+              <button type="submit" class="btn btn-primary">Restablecer Contraseña</button>
+          </div>
+      </div>
+  </form>
+</div>
+{% endblock %}
