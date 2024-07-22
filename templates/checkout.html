@@ -1,30 +1,99 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
 {% block title %}
-Checkout
+Finalizar Compra
 {% endblock %}
 
 {% block content %}
 <div class="container mt-5">
-    <h2>Checkout</h2>
-    <form method="POST" action="{{ url_for('checkout') }}">
+    <h2>Finalizar Compra</h2>
+    <form action="{{ url_for('checkout') }}" method="POST">
+        <!-- Direcciones de Envío -->
         <div class="form-group">
             <label for="direccion_envio">Dirección de Envío</label>
-            <select class="form-control" id="direccion_envio" name="direccion_envio" required>
-                {% for direccion in direcciones %}
-                <option value="{{ direccion.id }}">{{ direccion.direccion }}, {{ direccion.ciudad }}, {{ direccion.provincia }}, {{ direccion.codigo_postal }}, {{ direccion.pais }}</option>
-                {% endfor %}
-            </select>
+            {% if direcciones %}
+                <select class="form-control" id="direccion_envio" name="direccion_envio" required>
+                    {% for direccion in direcciones %}
+                    <option value="{{ direccion.id }}">{{ direccion.direccion }}, {{ direccion.ciudad }}, {{ direccion.provincia }}</option>
+                    {% endfor %}
+                    <option value="" id="nueva-direccion-opcion">Añadir nueva dirección</option>
+                </select>
+                <div id="nueva-direccion" style="display:none;">
+                    <input type="text" class="form-control mt-2" name="nombre_direccion" placeholder="Nombre" required>
+                    <input type="text" class="form-control mt-2" name="direccion" placeholder="Dirección" required>
+                    <input type="text" class="form-control mt-2" name="ciudad" placeholder="Ciudad" required>
+                    <input type="text" class="form-control mt-2" name="provincia" placeholder="Provincia" required>
+                    <input type="text" class="form-control mt-2" name="codigo_postal" placeholder="Código Postal" required>
+                    <input type="text" class="form-control mt-2" name="pais" placeholder="País" required>
+                </div>
+            {% else %}
+                <div id="nueva-direccion">
+                    <input type="text" class="form-control mt-2" name="nombre_direccion" placeholder="Nombre" required>
+                    <input type="text" class="form-control mt-2" name="direccion" placeholder="Dirección" required>
+                    <input type="text" class="form-control mt-2" name="ciudad" placeholder="Ciudad" required>
+                    <input type="text" class="form-control mt-2" name="provincia" placeholder="Provincia" required>
+                    <input type="text" class="form-control mt-2" name="codigo_postal" placeholder="Código Postal" required>
+                    <input type="text" class="form-control mt-2" name="pais" placeholder="País" required>
+                </div>
+            {% endif %}
         </div>
+        <!-- Métodos de Pago -->
         <div class="form-group">
             <label for="metodo_pago">Método de Pago</label>
-            <select class="form-control" id="metodo_pago" name="metodo_pago" required>
-                {% for metodo in metodos_pago %}
-                <option value="{{ metodo.id }}">{{ metodo.tipo }} - {{ metodo.numero }}</option>
-                {% endfor %}
-            </select>
+            {% if metodos_pago %}
+                <select class="form-control" id="metodo_pago" name="metodo_pago" required>
+                    {% for metodo in metodos_pago %}
+                    <option value="{{ metodo.id }}">{{ metodo.tipo }} - {{ metodo.numero }}</option>
+                    {% endfor %}
+                    <option value="" id="nuevo-metodo-opcion">Añadir nuevo método de pago</option>
+                </select>
+                <div id="nuevo-metodo" style="display:none;">
+                    <input type="text" class="form-control mt-2" name="tipo_pago" placeholder="Tipo de Pago" required>
+                    <input type="text" class="form-control mt-2" name="numero_pago" placeholder="Número de Tarjeta" required>
+                    <input type="text" class="form-control mt-2" name="expiracion_pago" placeholder="Fecha de Expiración (MM/AA)" required>
+                </div>
+            {% else %}
+                <div id="nuevo-metodo">
+                    <input type="text" class="form-control mt-2" name="tipo_pago" placeholder="Tipo de Pago" required>
+                    <input type="text" class="form-control mt-2" name="numero_pago" placeholder="Número de Tarjeta" required>
+                    <input type="text" class="form-control mt-2" name="expiracion_pago" placeholder="Fecha de Expiración (MM/AA)" required>
+                </div>
+            {% endif %}
         </div>
+        <h3>Resumen del Pedido</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in carrito_items %}
+                <tr>
+                    <td>{{ item.producto.nombre }}</td>
+                    <td>{{ item.cantidad }}</td>
+                    <td>${{ item.producto.precio }}</td>
+                    <td>${{ item.cantidad * item.producto.precio }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         <button type="submit" class="btn btn-primary">Realizar Pedido</button>
     </form>
 </div>
+
+<script>
+    document.getElementById('direccion_envio').addEventListener('change', function() {
+        var nuevaDireccion = document.getElementById('nueva-direccion');
+        nuevaDireccion.style.display = this.value === "" ? 'block' : 'none';
+    });
+
+    document.getElementById('metodo_pago').addEventListener('change', function() {
+        var nuevoMetodo = document.getElementById('nuevo-metodo');
+        nuevoMetodo.style.display = this.value === "" ? 'block' : 'none';
+    });
+</script>
 {% endblock %}

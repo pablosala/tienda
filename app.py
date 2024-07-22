@@ -179,13 +179,32 @@ def register():
         nombre = request.form['nombre']
         email = request.form['email']
         password = request.form['password']
+        
+        # Crear el usuario
         user = Usuario(nombre=nombre, email=email)
         user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-        flash('Usuario registrado con éxito', 'success')
-        return redirect(url_for('login'))
+        
+        try:
+            # Agregar y confirmar el usuario en la base de datos
+            db.session.add(user)
+            db.session.flush()  # Obtener el ID del usuario antes de hacer commit
+            
+            # Crear un carrito para el usuario recién registrado
+            carrito = Carrito(usuario_id=user.id)
+            db.session.add(carrito)
+            db.session.commit()  # Hacer commit para ambos en un solo paso
+            
+            flash('Usuario registrado con éxito', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al registrar el usuario: {str(e)}', 'danger')
+    
     return render_template('register.html')
+
+
+
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -348,27 +367,53 @@ def checkout():
     usuario_id = current_user.id
     carrito = Carrito.query.filter_by(usuario_id=usuario_id).first()
 
-    if not carrito:
+    if not carrito or not carrito.items:
         flash('No hay productos en el carrito', 'danger')
         return redirect(url_for('index'))
 
     if request.method == 'POST':
-        direccion_envio_id = request.form['direccion_envio']
-        metodo_pago_id = request.form['metodo_pago']
+        if 'direccion_envio' in request.form:
+            direccion_envio_id = request.form['direccion_envio']
+        else:
+            nueva_direccion = Direccion(
+                nombre=request.form['nombre_direccion'],
+                direccion=request.form['direccion'],
+                ciudad=request.form['ciudad'],
+                provincia=request.form['provincia'],
+                codigo_postal=request.form['codigo_postal'],
+                pais=request.form['pais'],
+                usuario_id=usuario_id
+            )
+            db.session.add(nueva_direccion)
+            db.session.flush()
+            direccion_envio_id = nueva_direccion.id
+
+        if 'metodo_pago' in request.form:
+            metodo_pago_id = request.form['metodo_pago']
+        else:
+            nuevo_metodo_pago = MetodoPago(
+                tipo=request.form['tipo_pago'],
+                numero=request.form['numero_pago'],
+                expiracion=request.form['expiracion_pago'],
+                usuario_id=usuario_id
+            )
+            db.session.add(nuevo_metodo_pago)
+            db.session.flush()
+            metodo_pago_id = nuevo_metodo_pago.id
 
         # Crear un nuevo pedido
         pedido = Orden(
             usuario_id=usuario_id,
             direccion_envio_id=direccion_envio_id,
             metodo_pago_id=metodo_pago_id,
-            total=calcular_total_carrito(carrito.id)
+            total=sum(item.cantidad * item.producto.precio for item in carrito.items),
+            status='Pending'
         )
         db.session.add(pedido)
         db.session.commit()
 
         # Mover los items del carrito al pedido
-        carrito_items = CarritoItem.query.filter_by(carrito_id=carrito.id).all()
-        for item in carrito_items:
+        for item in carrito.items:
             orden_producto = OrdenProducto(
                 orden_id=pedido.id,
                 producto_id=item.producto_id,
@@ -378,10 +423,10 @@ def checkout():
             db.session.add(orden_producto)
             db.session.delete(item)  # Eliminar los items del carrito
         db.session.commit()
-        
+
         flash('Tu pedido ha sido realizado con éxito', 'success')
         return redirect(url_for('index'))
-    
+
     direcciones = Direccion.query.filter_by(usuario_id=usuario_id).all()
     metodos_pago = MetodoPago.query.filter_by(usuario_id=usuario_id).all()
     carrito_items = CarritoItem.query.filter_by(carrito_id=carrito.id).all()
