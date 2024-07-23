@@ -1,0 +1,106 @@
+body {
+    background-image: url('../images/presuapp.jpg'); /* Reemplaza con la ruta correcta de tu imagen */
+    background-size: cover; /* Ajusta el tamaño de la imagen para que cubra todo el fondo */
+    background-repeat: no-repeat; /* Evita que la imagen se repita */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Esto asegura que la página ocupe toda la altura de la ventana */
+    margin: 0; /* Elimina los márgenes predeterminados del cuerpo */
+}
+
+#fondo-degradado {
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 1), rgba(173, 216, 230, 0.5), rgba(173, 216, 230, 0.5), rgba(255, 255, 255, 1)); /* Degradado blanco a azul claro en los bordes */
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1; /* Coloca el fondo detrás de otros elementos */
+}
+
+#formulario {
+    background-color: rgba(230, 246, 255, 0.8); /* Azul claro casi blanco semitransparente */
+    padding: 20px; /* Espacio alrededor del formulario */
+    border-radius: 10px; /* Bordes redondeados */
+    text-align: center; /* Centra el contenido del formulario */
+    box-shadow: 0 0 20px rgba(16, 171, 255, 0.5); /* Utiliza tu color y transparencia deseada */
+}
+
+
+/* Estilos generales para el contenedor del input */
+.input-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Estilos para el input de texto */
+input {
+    padding: 8px 12px;
+    border: 2px solid transparent; /* Borde inicial transparente */
+    border-radius: 20px; /* Bordes redondos */
+    font-size: 14px;
+    outline: none; /* Quita el contorno al hacer clic */
+    transition: border-color 0.3s, box-shadow 0.3s; /* Transición para el borde y la sombra */
+    margin-bottom: 10px; /* Espacio entre los campos de entrada */
+}
+
+/* Estilos para el input cuando se enfoca (clic) */
+input:focus {
+    border-color: #1beabd; /* Color del borde al enfocar */
+    box-shadow: 0 0 10px rgba(16, 171, 255, 0.5); /* Sombra al enfocar */
+    cursor: pointer;
+    font-weight: bold;
+    filter: drop-shadow(0 0 5px #1beabd) drop-shadow(0 0 15px #1beabd) contrast(2) brightness(1);
+    transition: 0.5s;
+}
+
+body {
+  display: flex;
+  height: 100vh;
+  align-items: center;
+  justify-content: center;
+  background-color: black;
+}
+
+.button-small {
+  color: #1beabd; /* Cambia el color a azul claro */
+  border: 4px solid #1beabd; /* Cambia el color del borde a azul claro */
+  border-radius: 12px;
+  padding: 4px 10px; /* Reduce el padding para hacer el botón más pequeño */
+  font-size: 16px; /* Reduce el tamaño de fuente */
+  cursor: pointer;
+  font-weight: bold;
+  filter: drop-shadow(0 0 5px #1beabd) drop-shadow(0 0 10px #1beabd) contrast(2) brightness(1);
+  transition: 0.5s;
+  margin-bottom: 15px;
+}
+
+.button {
+  color: #1beabd; /* Cambia el color a azul claro */
+  border: 6px solid #1beabd; /* Cambia el color del borde a azul claro */
+  border-radius: 15px;
+  padding: 8px 16px; /* Reduce el padding para hacer el botón más pequeño */
+  font-size: 20px; /* Reduce el tamaño de fuente */
+  cursor: pointer;
+  font-weight: bold;
+  filter: drop-shadow(0 0 5px #1beabd) drop-shadow(0 0 15px #1beabd) contrast(2) brightness(1);
+  transition: 0.5s;
+}
+
+.button:hover {
+  color: white;
+  background-color: #1beabd; /* Cambia el color de fondo a azul claro al pasar el mouse */
+  filter: drop-shadow(0 0 20px #1beabd) contrast(2) brightness(2);
+}
+#fijar-precios {
+    float: right; /* Usar float para alinear a la derecha */
+    margin-left: 20px; /* Opcional: Agregar un margen izquierdo para separarlo del contenido principal */
+    background-color: rgba(230, 246, 255, 0.8); /* Azul claro casi blanco semitransparente */
+    padding: 20px; /* Espacio alrededor del formulario */
+    border-radius: 10px; /* Bordes redondeados */
+    text-align: center; /* Centra el contenido del formulario */
+    box-shadow: 0 0 20px rgba(16, 171, 255, 0.5); /* Utiliza tu color y transparencia deseada */
+}

@@ -13,6 +13,10 @@ from jinja2 import Environment, FileSystemLoader
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from itsdangerous import URLSafeTimedSerializer
+import requests
+import math
+import json
 
 # Configurar la zona horaria de Madrid
 madrid_tz = pytz.timezone('Europe/Madrid')
@@ -54,11 +58,24 @@ class Usuario(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='user')
+    is_confirmed = db.Column(db.Boolean, default=False)
     ordenes = db.relationship('Orden', backref='usuario', lazy=True)
     direcciones = db.relationship('Direccion', backref='usuario', lazy=True)
     metodos_pago = db.relationship('MetodoPago', backref='usuario', lazy=True)
     carrito = db.relationship('Carrito', backref='usuario', uselist=False)
 
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+class TempUsuario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -180,28 +197,33 @@ def register():
         email = request.form['email']
         password = request.form['password']
         
-        # Crear el usuario
-        user = Usuario(nombre=nombre, email=email)
-        user.set_password(password)
+        # Verificar si el correo ya está registrado en la tabla temporal o principal
+        user = Usuario.query.filter_by(email=email).first() or TempUsuario.query.filter_by(email=email).first()
+        if user:
+            flash('El correo electrónico ya está registrado. Por favor, inicia sesión.', 'warning')
+            return redirect(url_for('login'))
+
+        # Crear el usuario temporal
+        temp_user = TempUsuario(nombre=nombre, email=email)
+        temp_user.set_password(password)
         
         try:
-            # Agregar y confirmar el usuario en la base de datos
-            db.session.add(user)
-            db.session.flush()  # Obtener el ID del usuario antes de hacer commit
+            db.session.add(temp_user)
+            db.session.commit()
             
-            # Crear un carrito para el usuario recién registrado
-            carrito = Carrito(usuario_id=user.id)
-            db.session.add(carrito)
-            db.session.commit()  # Hacer commit para ambos en un solo paso
+            # Generar token de confirmación y enviar correo
+            token = generate_confirmation_token(email)
+            confirm_url = url_for('confirm_email', token=token, _external=True)
+            html_content = render_template('email_confirmation.html', confirm_url=confirm_url)
+            send_email(email, 'Confirma tu correo electrónico', html_content)
             
-            flash('Usuario registrado con éxito', 'success')
-            return redirect(url_for('login'))
+            flash('Se ha enviado un correo electrónico para confirmar tu dirección de correo.', 'success')
+            return redirect(url_for('waiting_confirmation', email=email))
         except Exception as e:
             db.session.rollback()
             flash(f'Error al registrar el usuario: {str(e)}', 'danger')
     
     return render_template('register.html')
-
 
 
 
@@ -848,7 +870,7 @@ def reset_with_token(token):
     if request.method == 'POST':
         password = request.form['password']
         user = Usuario.query.filter_by(email=email).first_or_404()
-        user.password = generate_password_hash(password)
+        user.password_hash = generate_password_hash(password)
         db.session.commit()
         flash('Tu contraseña ha sido actualizada.', 'success')
         return redirect(url_for('login'))
@@ -868,20 +890,12 @@ def confirm_token(token, expiration=3600):
     return email
 
 def send_reset_email(to_email, token):
-    msg = Message('Restablecer tu contraseña', sender=app.config['MAIL_DEFAULT_SENDER'], recipients=[to_email])
-    msg.body = f'To reset your password, visit the following link: {url_for("reset_with_token", token=token, _external=True)}\n\nIf you did not make this request then simply ignore this email and no changes will be made.'
-    mail.send(msg)
-
-
-
-
-
-
-
-
+    subject = "Restablecer tu contraseña"
+    html_content = render_template('reset_password_email.html', token=token, _external=True)
+    send_email(to_email, subject, html_content)
 
 def send_email(to_email, subject, html_content):
-    from_email = 'salasaxsolidsurface@gmail.com'  # Cambia esto a tu dirección de correo
+    from_email = 'salasaxsolidsurface@gmail.com'
 
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
@@ -892,7 +906,7 @@ def send_email(to_email, subject, html_content):
     msg.attach(part)
 
     try:
-        server = smtplib.SMTP('localhost', 25)  # Conexión a Postfix en localhost
+        server = smtplib.SMTP('localhost', 25)
         server.sendmail(from_email, to_email, msg.as_string())
         server.quit()
         print(f'Correo enviado a {to_email}')
@@ -910,6 +924,416 @@ def send_email_test():
     send_email(to_email, subject, html_content)
     flash('Correo enviado con éxito', 'success')
     return redirect(url_for('index'))
+
+
+def send_welcome_email(to_email):
+    subject = 'Bienvenido a Sala Sax'
+    html_content = render_template('welcome_email.html')
+    send_email(to_email, subject, html_content)
+
+@app.route('/waiting_confirmation')
+def waiting_confirmation():
+    return render_template('waiting_confirmation.html')
+
+@app.route('/confirm/<token>')
+def confirm_email(token):
+    try:
+        email = confirm_token(token)
+    except:
+        flash('El enlace de confirmación es inválido o ha expirado.', 'danger')
+        return redirect(url_for('index'))
+    
+    temp_user = TempUsuario.query.filter_by(email=email).first()
+    if temp_user:
+        try:
+            # Crear el usuario en la tabla principal
+            user = Usuario(nombre=temp_user.nombre, email=temp_user.email, password_hash=temp_user.password_hash)
+            db.session.add(user)
+            db.session.flush()  # Obtener el ID del usuario antes de hacer commit
+            
+            # Crear un carrito para el usuario recién registrado
+            carrito = Carrito(usuario_id=user.id)
+            db.session.add(carrito)
+            db.session.delete(temp_user)  # Eliminar el usuario temporal
+            db.session.commit()  # Hacer commit para todos los cambios
+            
+            send_welcome_email(user.email)
+            
+            flash('Tu cuenta ha sido confirmada y registrada con éxito. Por favor, inicia sesión.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al confirmar el usuario: {str(e)}', 'danger')
+    
+    flash('Ocurrió un error al confirmar tu cuenta. Por favor, inténtalo de nuevo.', 'danger')
+    return redirect(url_for('index'))
+
+
+@app.route('/check_confirmation_status', methods=['POST'])
+def check_confirmation_status():
+    email = request.form['email']
+    user = Usuario.query.filter_by(email=email).first()
+    if user and user.is_confirmed:
+        return jsonify({'confirmed': True})
+    return jsonify({'confirmed': False})
+
+@app.route('/await_confirmation/<email>')
+def await_confirmation(email):
+    return render_template('await_confirmation.html', email=email)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#------------------------------------- PRESUAPP ----------------------------------
+
+
+
+
+
+
+try:
+    with open('config.json', 'r') as config_file:
+        app.config['configuracion'] = json.load(config_file)
+except FileNotFoundError:
+    # Si el archivo no existe, crea una configuración inicial vacía
+    app.config['configuracion'] = {}
+
+
+@app.route('/admin/presuapp')
+def presuapp():
+    return render_template('presuapp.html', configuracion=app.config['configuracion'])
+
+
+@app.route('/fijar_precios', methods=['POST'])
+def fijar_precios():
+    if request.is_json:
+        # Obtén los precios del cuerpo JSON de la solicitud
+        precios = request.get_json()
+        
+        # Actualiza la configuración en la aplicación
+        app.config['configuracion'].update(precios)
+    
+        # Guarda la configuración en el archivo JSON
+        with open('config.json', 'w') as config_file:
+            json.dump(app.config['configuracion'], config_file)
+
+        # Puedes devolver una respuesta JSON para confirmar el éxito
+        return jsonify({'message': 'Precios guardados exitosamente'})
+    
+    # En caso contrario, si la solicitud no es JSON, puedes devolver una respuesta de error
+    return jsonify({'error': 'Solicitud no válida'}), 400
+
+@app.route('/calcular', methods=['POST'])
+def calcular():
+    # Obtén los valores de origen y destino del formulario
+    origen = request.form['origen']
+    destino = request.form['destino']
+
+    # Obtiene las coordenadas de origen y destino
+    origen_coords = obtener_coordenadas(origen)
+    destino_coords = obtener_coordenadas(destino)
+
+    if origen_coords is None or destino_coords is None:
+        return "No se pudieron obtener las coordenadas de origen y destino."
+
+    # Calcula la distancia y el tiempo de viaje utilizando OpenRouteService
+    distancia_km, tiempo_viaje_minutos = calcular_distancia_openrouteservice(origen_coords, destino_coords)
+
+    if distancia_km is None or tiempo_viaje_minutos is None:
+        return "No se pudieron obtener la distancia y el tiempo de viaje."
+
+    cantidad_combustible = (distancia_km / 100) * 12
+
+    # Calcula el costo de desplazamiento utilizando el precio promedio de la gasolina (fuente pública)
+    costo_gasolina = obtener_precio_gasolina()  # Puedes implementar esta función
+
+    costo_desplazamiento = cantidad_combustible * costo_gasolina
+
+    #################### CARGA DE PRECIOS DESDE config.json ##########################
+    with open('config.json', 'r') as config_file:
+        precios_config = json.load(config_file)
+
+    solid_costo_unitario = float(precios_config.get('solid_costo_unitario', 120.0))
+    precio_lija = float(precios_config.get('precio_lija', 5.0))
+    precio_pegamento = float(precios_config.get('precio_pegamento', 12.0))
+    precio_p404 = float(precios_config.get('precio_p404', 9.0))
+    precio_mecanizado = float(precios_config.get('precio_mecanizado', 75.0))
+    precio_mecanizado_peon = float(precios_config.get('precio_mecanizado_peon', 75.0))
+
+    # Obtener el tipo de presupuesto
+    tipo_presupuesto = request.form['tipo_presupuesto']
+
+    # Obtener listas de ancho y largo de Solid
+    solid_ancho_list = [float(x) if x else 0.0 for x in request.form.getlist('solid_ancho[]')]
+    solid_largo_list = [float(x) if x else 0.0 for x in request.form.getlist('solid_largo[]')]
+
+    # Sumar todas las áreas de "Solid"
+    area_solid = sum([ancho * largo for ancho, largo in zip(solid_ancho_list, solid_largo_list)]) * solid_costo_unitario
+    total_m2 = sum([ancho * largo for ancho, largo in zip(solid_ancho_list, solid_largo_list)])
+
+    # Obtener los valores de los otros atributos comunes
+    pegamento = float(request.form['pegamento']) if 'pegamento' in request.form and request.form['pegamento'] else 0.0
+    lijas = float(request.form['lijas']) if 'lijas' in request.form and request.form['lijas'] else 0.0
+    p404 = float(request.form['p404']) if 'p404' in request.form and request.form['p404'] else 0.0
+    mecanizado = float(request.form['mecanizado']) if 'mecanizado' in request.form and request.form['mecanizado'] else 0.0
+    peon = float(request.form['peon']) if 'peon' in request.form and request.form['peon'] else 0.0
+    fregadero = float(request.form['fregadero']) if 'fregadero' in request.form and request.form['fregadero'] else 0.0
+    valvula = float(request.form['valvula']) if 'valvula' in request.form and request.form['valvula'] else 0.0
+    colocacion = float(request.form['colocacion']) if 'colocacion' in request.form and request.form['colocacion'] else 0.0
+    desplazamiento = float(request.form['desplazamiento']) if 'desplazamiento' in request.form and request.form['desplazamiento'] else 0.0
+
+    # Inicializa la variable mano_obra_solid con un valor predeterminado de 0.0
+    mano_obra_solid = 0.0
+
+    # Verifica si se proporciona el valor en el formulario y, si es así, asigna el valor correspondiente
+    if 'mano_obra_solid' in request.form and request.form['mano_obra_solid']:
+        mano_obra_solid = float(request.form['mano_obra_solid'])
+
+    # Inicializa la variable mano_obra_acero con un valor predeterminado de 0.0
+    mano_obra_acero = 0.0
+
+    # Verifica si se proporciona el valor en el formulario y, si es así, asigna el valor correspondiente
+    if 'mano_obra_acero' in request.form and request.form['mano_obra_acero']:
+        mano_obra_acero = float(request.form['mano_obra_acero'])
+
+
+    lijas = sum([ancho * largo for ancho, largo in zip(solid_ancho_list, solid_largo_list)]) * precio_lija
+
+    # Agrega el campo "Costado" solo si es "Isla"
+    costado = float(request.form['costado']) if tipo_presupuesto == 'isla' and 'costado' in request.form and request.form['costado'] else 0.0
+
+    tipo_fregadero = request.form.get('tipo_fregadero')
+
+    
+    if tipo_fregadero == 'solid':
+        precio_solid = request.form['precio_solid']
+        mecanizado_solid_str = request.form.get('mecanizado_solid', '')
+        mano_obra_solid_str = request.form.get('mano_obra_solid', '')
+        
+        mecanizado_solid = float(mecanizado_solid_str) if mecanizado_solid_str else 0.0
+        mano_obra_solid = float(mano_obra_solid_str) if mano_obra_solid_str else 0.0
+    elif tipo_fregadero == 'acero':
+        mano_obra_acero_str = request.form.get('mano_obra_acero', '')
+        mano_obra_acero = float(mano_obra_acero_str) if mano_obra_acero_str else 0.0
+    else:
+        precio_solid = mecanizado_solid = mano_obra_solid = mano_obra_acero = 0.0
+
+    tipo_canto = request.form.get('tipo_canto', 'recto')  # Valor predeterminado si no se selecciona tipo de canto
+
+
+    precios_canto = {}
+
+    # Verifica si el tipo de canto es "-" y establece el costo en consecuencia
+    if tipo_canto == '-':
+        costo_canto = 0.0
+        medida_canto = 0.0
+    else:
+        if tipo_canto == 'recto':
+            medida_canto = request.form.get('medida_canto_recto', 'hasta_2_4')  # Valor predeterminado si no se selecciona medida de canto recto
+        else:
+            medida_canto = request.form.get('medida_canto_redondo', 'hasta_2_4')  # Valor predeterminado si no se selecciona medida de canto redondo
+
+        # Calcula el costo del canto si tipo_canto no es "-"
+        if tipo_canto != '-':
+            precios_canto = {
+                'recto': {
+                    'hasta_2_4': 40,
+                    '3_a_6': 60,
+                    '8_o_mas': 70
+                },
+                'redondo': {
+                    'hasta_2_4': 50,  # 10€ más caro
+                    '3_a_6': 70,  # 10€ más caro
+                    '8_o_mas': 80   # 10€ más caro
+                }
+            }
+        costo_canto = precios_canto[tipo_canto][medida_canto]
+
+
+    # Resto del código para calcular y renderizar
+
+
+    metros_canto = float(request.form.get('metros_canto', 0.0))
+
+
+    #costo_canto = precios_canto[tipo_canto][medida_canto]
+
+    # Calcula el costo del pegamento para cantos
+    costo_pegamento_cantos = (metros_canto / 3) * precio_pegamento
+
+    # Calcula el costo de las lijas para cantos
+    costo_lijas_cantos = metros_canto * precio_lija
+
+    # Calcula el presupuesto total
+    costo_pegamento = pegamento * precio_pegamento
+    cantidad_pegamento = pegamento * 3
+
+    costo_p404 = p404 * precio_p404
+    cantidad_p404 = p404 * 3
+
+
+    # Mecanizado
+    costo_mecanizado = mecanizado * precio_mecanizado
+    costo_mecanizado_peon = peon * precio_mecanizado_peon
+
+    # Calcula el presupuesto total
+    presupuesto_total = calcular_presupuesto(
+    tipo_presupuesto, 
+    area_solid, 
+    costo_pegamento + costo_pegamento_cantos,
+    lijas, 
+    p404, 
+    mecanizado, 
+    peon, 
+    fregadero,  # Campo de fregadero
+    valvula, 
+    colocacion, 
+    costo_desplazamiento, 
+    costado, 
+    tipo_canto, 
+    medida_canto, 
+    metros_canto, 
+    costo_canto, 
+    costo_pegamento_cantos, 
+    costo_lijas_cantos, 
+    tipo_fregadero,  # Campo de tipo de fregadero
+    precio_solid, #ERA precio_solid 
+    mecanizado_solid, 
+    mano_obra_solid, 
+    mano_obra_acero)
+
+    # Renderiza la factura con los resultados
+    return render_template('factura.html', area_solid=area_solid, total_m2=total_m2, pegamento=pegamento,precio_pegamento=precio_pegamento,costo_pegamento=costo_pegamento,cantidad_pegamento=cantidad_pegamento, lijas=lijas, precio_lija=precio_lija, p404=p404, costo_p404=costo_p404, cantidad_p404=cantidad_p404, precio_p404=precio_p404, mecanizado=mecanizado,precio_mecanizado=precio_mecanizado,costo_mecanizado=costo_mecanizado, peon=peon,precio_mecanizado_peon=precio_mecanizado_peon,costo_mecanizado_peon=costo_mecanizado_peon, fregadero=fregadero, valvula=valvula, colocacion=colocacion, desplazamiento=desplazamiento, presupuesto=presupuesto_total, solid_costo_unitario=solid_costo_unitario, tipo_presupuesto=tipo_presupuesto, costado=costado, distancia_km=distancia_km, costo_desplazamiento=costo_desplazamiento, tiempo_viaje_minutos=tiempo_viaje_minutos, origen=origen, destino=destino, tipo_canto=tipo_canto, medida_canto=medida_canto, metros_canto=metros_canto, costo_canto=costo_canto, costo_pegamento_cantos=costo_pegamento_cantos, costo_lijas_cantos=costo_lijas_cantos,tipo_fregadero=tipo_fregadero,precio_solid=precio_solid, mecanizado_solid=mecanizado_solid, mano_obra_solid=mano_obra_solid, mano_obra_acero=mano_obra_acero)
+
+
+# Implementa la lógica de cálculo del presupuesto aquí
+def calcular_presupuesto(
+    tipo_presupuesto, 
+    area_solid, 
+    costo_pegamento, #+ costo_pegamento_cantos,
+    lijas, 
+    p404, 
+    mecanizado, 
+    peon, 
+    fregadero,  # Campo de fregadero
+    valvula, 
+    colocacion, 
+    costo_desplazamiento, 
+    costado, 
+    tipo_canto, 
+    medida_canto, 
+    metros_canto, 
+    costo_canto, 
+    costo_pegamento_cantos, 
+    costo_lijas_cantos, 
+    tipo_fregadero,  # Campo de tipo de fregadero
+    precio_solid, 
+    mecanizado_solid, 
+    mano_obra_solid, 
+    mano_obra_acero):    # Realiza los cálculos según los valores ingresados
+    # Puedes usar if/else para distinguir entre "Isla" y "Encimera" y realizar los cálculos correspondientes
+    #
+    #krion= multiplicar ancho * largo y sumar todos y multiplicar 150€/m2
+    #pegamento= 13€/tubo/3m
+    #Lijas= 5€/m2
+    #P404= 12€/tubo/3m
+    #Fregadero= -->Comprar-->krion(modelos.pvp)
+    #                        Valvula logo=60€
+    #                        Mecanizado= 100€
+    #                        Mano Obra = 150€
+    #
+    #              Acero -->acero.pvp
+    #                       fresado=x€
+    #                       pegado=x€
+    #
+    #Mecanizado= Maquina=80€/h
+    #            Hombre=20€/h
+    #
+    #Cantos-->tipos-->hasta 2,4cm=40€       de 3cm a 6cm= 60€      de 8cm o más=70€   metro lineal/€
+    #                 
+    #
+    #Tabla-->(Mano obra de lijado)= m2 krion * 35€m2
+    #
+    #Instalacion---->Desplazamiento
+    #                Tiempo=20h/€ por persona
+    
+    precio_pegamento = 13.0
+    precio_p404 = 12.0
+    p_pegamento = (costo_pegamento * precio_pegamento) / 3
+    p_p404 = (p404 * precio_p404) / 3    
+
+    # Realiza otros cálculos según sea necesario
+    # ...
+    
+    if tipo_presupuesto == 'isla':
+        otro_calculo = 0
+    else:
+        otro_calculo = 0
+    
+    presupuesto_total =area_solid + costo_pegamento + costo_pegamento_cantos +lijas +p404 + mecanizado + peon + valvula + colocacion + costo_desplazamiento + costado + metros_canto + costo_canto + costo_pegamento_cantos + costo_lijas_cantos + mecanizado_solid + mano_obra_solid + mano_obra_acero
+    
+    return presupuesto_total
+
+def obtener_coordenadas(nombre_lugar):
+    # Realiza una solicitud a la API de Nominatim para obtener las coordenadas geográficas
+    url = f'https://nominatim.openstreetmap.org/search?format=json&q={nombre_lugar}'
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        data = response.json()
+        if data and len(data) > 0:
+            # Obtiene las coordenadas del primer resultado
+            latitud = float(data[0]['lat'])
+            longitud = float(data[0]['lon'])
+            return (latitud, longitud)
+    
+    return None
+
+def calcular_distancia_openrouteservice(origen_coords, destino_coords):
+    api_key = '5b3ce3597851110001cf62485cb4cfbbdb0a43f88be973e00a928439'  # Reemplaza con tu propia clave
+
+    # Crea una solicitud para obtener la distancia y el tiempo de viaje entre las ubicaciones
+    url = f'https://api.openrouteservice.org/v2/matrix/driving-car?api_key={api_key}'
+    data = {
+        "locations": [[origen_coords[1], origen_coords[0]], [destino_coords[1], destino_coords[0]]],  # Invierte latitud y longitud
+        "metrics": ["distance", "duration"],  # Solicita distancia y tiempo de viaje
+        "units": "km"  # Unidades de distancia en kilómetros
+    }
+
+    response = requests.post(url, json=data)
+
+    if response.status_code == 200:
+        result = json.loads(response.text)
+        distancia_km = result['distances'][0][1] # Obtiene la distancia en kilómetros
+        tiempo_viaje_minutos = result['durations'][0][1] / 60.0  # Obtiene el tiempo de viaje en minutos
+        return distancia_km, tiempo_viaje_minutos
+    else:
+        # En caso de error, retorna None o maneja el error de acuerdo a tus necesidades
+        return None, None
+
+def obtener_precio_gasolina():
+    # Intenta obtener el precio de la gasolina desde una fuente externa
+    try:
+        # Lógica para obtener el precio de la gasolina aquí
+        # Si obtienes el precio con éxito, devuelve el valor como un float
+        precio_gasolina = 1.78  # Ejemplo de precio de gasolina en euros por litro
+        return precio_gasolina
+    except Exception as e:
+        # Si no puedes obtener el precio, devuelve un valor predeterminado
+        return 1.78  # Precio predeterminado en caso de error o falta de datos
 
 
 

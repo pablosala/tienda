@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Calculadora de Presupuestos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/presuapp.css') }}">
+    <script>
+        function duplicateSolidField() {
+            var container = document.getElementById("solid-container");
+            var newSolidField = document.createElement("div");
+
+            newSolidField.innerHTML = `
+                <label for="solid_ancho">Solid - Ancho (metros):</label>
+                <input type="number" id="solid_ancho" name="solid_ancho[]" step="0.01">
+                <label for="solid_largo">Solid - Largo (metros):</label>
+                <input type="number" id="solid_largo" name="solid_largo[]" step="0.01">
+            `;
+
+            container.appendChild(newSolidField);
+        }
+
+        function toggleCostadoField() {
+            var tipoPresupuesto = document.getElementById("tipo_presupuesto").value;
+            var costadoField = document.getElementById("costado-field");
+
+            if (tipoPresupuesto === "isla") {
+                costadoField.style.display = "block";  // Mostrar el campo
+            } else {
+                costadoField.style.display = "none";   // Ocultar el campo
+            }
+        }
+
+    function mostrarCamposTipo() {
+        var tipo = document.getElementById("tipo").value;
+
+        // Oculta todos los campos relacionados con los tipos de fregadero
+        document.getElementById("campos_tipo_solid").style.display = "none";
+        document.getElementById("campos_tipo_acero").style.display = "none";
+
+        // Muestra los campos específicos según la selección
+        if (tipo === "solid") {
+            // Se seleccionó "Solid", muestra los campos de Solid
+            document.getElementById("campos_tipo_solid").style.display = "block";
+        } else if (tipo === "acero") {
+            // Se seleccionó "Acero", muestra los campos de Acero
+            document.getElementById("campos_tipo_acero").style.display = "block";
+        }
+    }
+
+    function mostrarCamposFregadero() {
+        var tipoFregadero = document.getElementById("tipo_fregadero_solid").value;
+
+        // Oculta todos los campos relacionados con el fregadero Solid
+        document.getElementById("campos_fregadero_solid").style.display = "none";
+        document.getElementById("campos_lavabo_solid").style.display = "none";
+
+        // Muestra los campos específicos del fregadero seleccionado
+        if (tipoFregadero === "Fregadero") {
+            // Se seleccionó "Fregadero", muestra los campos de Fregadero
+            document.getElementById("campos_fregadero_solid").style.display = "block";
+        } else if (tipoFregadero === "Lavabo") {
+            // Se seleccionó "Lavabo", muestra los campos de Lavabo
+            document.getElementById("campos_lavabo_solid").style.display = "block";
+        }
+    }
+
+        
+        function mostrarMedidasCanto() {
+            var tipoCanto = document.getElementById("tipo_canto").value;
+            var medidasCantoRecto = document.getElementById("medidas_canto_recto");
+            var medidasCantoRedondo = document.getElementById("medidas_canto_redondo");
+            
+            if (tipoCanto === "recto") {
+                medidasCantoRecto.style.display = "block";
+                medidasCantoRedondo.style.display = "none";
+            } else if (tipoCanto === "redondo") {
+                medidasCantoRecto.style.display = "none";
+                medidasCantoRedondo.style.display = "block";
+            } else {
+                medidasCantoRecto.style.display = "none";
+                medidasCantoRedondo.style.display = "none";
+            }
+        }
+
+
+
+
+
+    </script>
+</head>
+<body>
+	   <div id="fondo-degradado"></div>
+    <div id="formulario">
+        <h2>Calcular Presupuesto</h2>
+    <form method="POST" action="/calcular">
+        <label for="tipo_presupuesto">Tipo de Presupuesto:</label>
+        <select name="tipo_presupuesto" class="button-small" id="tipo_presupuesto" onchange="toggleCostadoField()">
+            <option value="encimera">Encimera</option>
+            <option value="isla">Isla</option>
+        </select>
+        <br>
+
+        <!-- Contenedor para campos "Solid" duplicados -->
+        <div id="solid-container">
+            <label for="solid_ancho">Solid - Ancho (metros):</label>
+            <input type="number" id="solid_ancho" name="solid_ancho[]" step="0.01">
+            <label for="solid_largo">Solid - Largo (metros):</label>
+            <input type="number" id="solid_largo" name="solid_largo[]" step="0.01">
+        </div>
+
+        <button type="button" class="button-small" onclick="duplicateSolidField()">Agregar Solid</button>
+        <br>
+
+        <label for="pegamento">Pegamento:</label>
+        <input type="number" name="pegamento">
+        <br>
+        <label for="lijas">Lijas:</label>
+        <input type="number" name="lijas">
+        <br>
+        <label for="p404">P404:</label>
+        <input type="number" name="p404">
+        <br>
+        <label for="mecanizado">Mecanizado:</label>
+        <input type="number" name="mecanizado">
+        <br>
+        <label for="peon">Peon:</label>
+        <input type="number" name="peon">
+        <br>
+        <label for="tipo">Tipo:</label>
+        <select name="tipo" class="button-small" id="tipo" onchange="mostrarCamposTipo()">
+            <option value="-" selected>-</option>
+            <option value="solid">Solid</option>
+            <option value="acero">Acero</option>
+        </select>
+
+        <div id="campos_tipo_solid" style="display: none;">
+        <select name="tipo_fregadero_solid" class="button-small" id="tipo_fregadero_solid" onchange="mostrarCamposFregadero()">
+            <option value="-" selected>-</option>
+            <option value="Fregadero">Fregadero</option>
+            <option value="Lavabo">Lavabo</option>
+        </select>
+
+        <div id="campos_fregadero_solid" style="display: none;">
+            <!-- Campos relacionados con Solid - Fregadero (modelo, mecanizado, mano de obra) -->
+            <label for="precio_solid_fregadero">Precio (Solid - Fregadero):</label>
+            <input type="text" id="precio_solid_fregadero" name="precio_solid_fregadero">
+
+            <label for="mano_obra_solid_fregadero">Mano de Obra (Solid - Fregadero):</label>
+            <input type="number" id="mano_obra_solid_fregadero" name="mano_obra_solid_fregadero">
+        </div>
+
+        <div id="campos_lavabo_solid" style="display: none;">
+            <!-- Campos relacionados con Solid - Lavabo (modelo, mecanizado, mano de obra) -->
+            <label for="precio_solid_lavabo">Precio (Solid - Lavabo):</label>
+            <input type="text" id="precio_solid_lavabo" name="precio_solid_lavabo">
+
+            <label for="mano_obra_solid_lavabo">Mano de Obra (Solid - Lavabo):</label>
+            <input type="number" id="mano_obra_solid_lavabo" name="mano_obra_solid_lavabo">
+        </div>
+    </div>
+
+
+        <div id="campos_tipo_acero" style="display: none;">
+            <!-- Campos relacionados con Acero (solo mano de obra) -->
+            <label for="mano_obra_acero">Mano de Obra (Acero):</label>
+            <input type="number" id="mano_obra_acero" name="mano_obra_acero">
+        </div>
+
+        <br>
+        <label for="tipo_canto">Tipo de Canto:</label>
+        <select name="tipo_canto" class="button-small" id="tipo_canto">
+            <option value="-" selected>-</option>
+            <option value="recto">Recto</option>
+            <option value="redondo">Redondo</option>
+        </select>
+
+        <div id="medidas_canto_recto" style="display: none;">
+            <!-- Campos relacionados con las medidas del canto recto -->
+            <label for="medida_canto_recto">Medida del Canto (Recto):</label>
+            <select name="medida_canto_recto" class="button-small" id="medida_canto_recto">
+                <option value="hasta_2_4">Hasta 2,4 cm (€40)</option>
+                <option value="3_a_6">3 cm a 6 cm (€60)</option>
+                <option value="8_o_mas">8 cm o más (€70)</option>
+            </select>
+        </div>
+
+        <div id="medidas_canto_redondo" style="display: none;">
+            <!-- Campos relacionados con las medidas del canto redondo -->
+            <label for="medida_canto_redondo">Medida del Canto (Redondo):</label>
+            <select name="medida_canto_redondo" class="button-small" id="medida_canto_redondo">
+                <option value="hasta_2_4">Hasta 2,4 cm (€50)</option>
+                <option value="3_a_6">3 cm a 6 cm (€70)</option>
+                <option value="8_o_mas">8 cm o más (€80)</option>
+            </select>
+        </div>
+        <br>
+        <label for="valvula">Valvula:</label>
+        <input type="number" name="valvula">
+        <br>
+        <label for="tabla">Tabla:</label>
+        <input type="number" name="tabla">
+        <br>
+        <label for="colocacion">Colocacion:</label>
+        <input type="number" name="colocacion">
+        <br>
+        <label for="desplazamiento">Desplazamiento--></label>
+
+        
+        <!-- Campos para introducir origen y destino -->
+        <label for="origen">Origen:</label>
+        <input type="text" id="origen" name="origen" placeholder="Ejemplo: Sax">
+        <label for="destino">Destino:</label>
+        <input type="text" id="destino" name="destino" placeholder="Ejemplo: Alicante">
+        <br>
+        <br>
+
+        <!-- Campo de Costado de Isla -->
+        <div id="costado-field" style="display: none;">
+            <label for="costado">Costado de Isla:</label>
+            <input type="number" name="costado">
+            <br>
+        </div>
+
+        <input type="submit" class="button" value="Calcular Presupuesto">
+    </div>
+    
+    <div class="configuracion "id="fijar-precios">
+        <h2>Fijar Precios</h2>
+        <form method="POST" action="/fijar_precios">
+            <!-- Agrega campos para fijar precios aquí -->
+            <label for="solid_costo_unitario">Precio Solid m2:</label>
+            <input type="number" name="solid_costo_unitario" value="{{ configuracion.get('solid_costo_unitario') }}"><br>
+            <label for="precio_lija">Precio Lija m2:</label>
+            <input type="number" name="precio_lija" value="{{ configuracion.get('precio_lija') }}"><br>
+
+            <label for="precio_pegamento">Precio Pegamento bote:</label>
+            <input type="float" name="precio_pegamento" value="{{ configuracion.get('precio_pegamento') }}"><br>
+
+            <label for="precio_p404">Precio P404 bote:</label>
+            <input type="float" name="precio_p404" value="{{ configuracion.get('precio_p404') }}"><br>
+
+            <label for="precio_mecanizado">Precio Mecanizado hora:</label>
+            <input type="float" name="precio_mecanizado" value="{{ configuracion.get('precio_mecanizado') }}"><br>
+
+            <label for="precio_mecanizado_peon">Precio Mecanizado Peon hora:</label>
+            <input type="float" name="precio_mecanizado_peon" value="{{ configuracion.get('precio_mecanizado_peon') }}"><br>
+
+            <label for="precio_mecanizado_peon">Precio Mecanizado Peon:</label>
+            <input type="float" name="precio_mecanizado_peon" value="{{ configuracion.get('precio_mecanizado_peon') }}"><br>
+
+            <!-- Agrega más campos de precios aquí -->
+            
+            <button type="button" class="button" id="guardarPrecios">Guardar Precios</button>
+        </form>
+<script>
+    // Agrega un evento al botón "Guardar Precios"
+    document.getElementById('guardarPrecios').addEventListener('click', function () {
+        // Obtiene los valores del formulario
+        const solid_costo_unitario = document.getElementsByName('solid_costo_unitario')[0].value;
+        const precio_lija = document.getElementsByName('precio_lija')[0].value;
+        const precio_pegamento = document.getElementsByName('precio_pegamento')[0].value;
+        const precio_p404 = document.getElementsByName('precio_p404')[0].value;
+        const precio_mecanizado = document.getElementsByName('precio_mecanizado')[0].value;
+        const precio_mecanizado_peon = document.getElementsByName('precio_mecanizado_peon')[0].value;
+
+        // Crea un objeto con los precios
+        const precios = {
+            solid_costo_unitario: solid_costo_unitario,
+            precio_lija: precio_lija,
+            precio_pegamento: precio_pegamento,
+            precio_p404: precio_p404,
+            precio_mecanizado: precio_mecanizado,
+            precio_mecanizado_peon: precio_mecanizado_peon
+        };
+
+        // Realiza una solicitud AJAX para guardar los precios
+        fetch('/fijar_precios', {
+            method: 'POST',
+            body: JSON.stringify(precios),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Aquí puedes manejar la respuesta del servidor si es necesario
+            console.log('Precios guardados exitosamente:', data);
+        })
+        .catch(error => {
+            console.error('Error al guardar precios:', error);
+        });
+    });
+</script>
+    </div>
+    <!-- Fin del contenedor para fijar precios -->
+
+    </form>
+        <script>
+        // Tu código JavaScript aquí
+        // ...
+
+        document.getElementById("tipo_canto").addEventListener("change", function () {
+            var tipoCanto = this.value;
+            var medidasCantoRecto = document.getElementById("medidas_canto_recto");
+            var medidasCantoRedondo = document.getElementById("medidas_canto_redondo");
+
+            if (tipoCanto === "recto") {
+                medidasCantoRecto.style.display = "block";
+                medidasCantoRedondo.style.display = "none";
+            } else if (tipoCanto === "redondo") {
+                medidasCantoRecto.style.display = "none";
+                medidasCantoRedondo.style.display = "block";
+            } else {
+                medidasCantoRecto.style.display = "none";
+                medidasCantoRedondo.style.display = "none";
+            }
+        });
+    </script>
+</body>
+</html>

@@ -5,9 +5,12 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Sala Sax &mdash; Solid Surface</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Free HTML5 Website Template by gettemplates.co" />
-    <meta name="keywords" content="free website templates, free html5, free template, free bootstrap, free website template, html5, css3, mobile first, responsive" />
-    <meta name="author" content="gettemplates.co" />
+    <meta name="description" content="Solid Surface" />
+    <meta name="keywords" content="solid surface, solidsurface, solidsurfaces, solid surfaces, encimeras cocina, encimeras, encimeras solidsurface, lavabos, lavabos solid surface, revestimientos, revestimientos solidsurface, revestimientos solid surface, platos, platos solid surface, decoración solid surface, restaurantes solid surface, lujo, exclusivo, personalizado, calidad" />
+    <meta name="author" content="Sala Sax" />
+    
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.jpg') }}">
 
     <!-- Animate.css -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/animate.css') }}">
@@ -114,20 +117,21 @@
         .dropdown-menu.show {
             display: block;
         }
-            /* Style the menu-2 items */
-    .fh5co-nav .menu-2 ul {
-        display: flex;
-        justify-content: center;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        margin-block-end:auto;
-    }
 
-    .fh5co-nav .menu-2 ul li {
-        margin: 0 10px;
-        display: inline-block; /* Ensure list items are inline */
-    }
+        /* Style the menu-2 items */
+        .fh5co-nav .menu-2 ul {
+            display: flex;
+            justify-content: center;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            margin-block-end:auto;
+        }
+
+        .fh5co-nav .menu-2 ul li {
+            margin: 0 10px;
+            display: inline-block; /* Ensure list items are inline */
+        }
         #fh5co-logo img {
             max-width: 60%;
             height: auto;
@@ -141,7 +145,6 @@
                 margin-top: -25px;
             }
         }
-
     </style>
 </head>
 <body>
@@ -152,28 +155,26 @@
     <nav class="fh5co-nav" role="navigation">
         <div class="container">
             <div class="row">
-        <div class="col-md-3 col-xs-2">
-            <div id="fh5co-logo">
-                <a href="{{ url_for('index') }}">
-                    <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Sala Sax Logo">
-                </a>
-            </div>
-        </div>
-
+                <div class="col-md-3 col-xs-2">
+                    <div id="fh5co-logo">
+                        <a href="{{ url_for('index') }}">
+                            <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Sala Sax Logo">
+                        </a>
+                    </div>
+                </div>
                 <div class="col-md-6 col-xs-6 text-center menu-1">
                     <ul>
-                    {% if current_user.is_authenticated and current_user.role == 'admin' %}
-                        <li><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
-                    {% endif %}
-                    <li class="has-dropdown">
-                        <a href="{{ url_for('index') }}" id="tienda-link">Tienda</a>
-                        <ul class="dropdown">
-                            {% for categoria in categorias %}
-                                <li><a href="{{ url_for('categoria_productos', categoria_id=categoria.id) }}">{{ categoria.nombre }}</a></li>
-                            {% endfor %}
-                        </ul>
-                    </li>
-
+                        {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                            <li><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
+                        {% endif %}
+                        <li class="has-dropdown">
+                            <a href="{{ url_for('index') }}" id="tienda-link">Tienda</a>
+                            <ul class="dropdown">
+                                {% for categoria in categorias %}
+                                    <li><a href="{{ url_for('categoria_productos', categoria_id=categoria.id) }}">{{ categoria.nombre }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </li>
                         <li><a href="{{ url_for('services') }}">Servicios</a></li>
                         <li><a href="{{ url_for('galeria') }}">Galería</a></li>
                         <li><a href="{{ url_for('contact') }}">Contacto</a></li>
@@ -183,7 +184,7 @@
                 <div class="col-md-3 col-xs-4 text-right hidden-xs menu-2">
                     <ul class="menu-2">
                         <li class="shopping-cart"><a href="{{ url_for('carrito') }}" class="cart"><span><small>{{ carrito_items_count }}</small><i class="icon-shopping-cart"></i></span></a></li>
-                        <li class="mi-cuenta"><a href="{{ url_for('detalles_cuenta') }}">mi cuenta</a></li>
+                        <li class="mi-cuenta"><a href="{{ url_for('detalles_cuenta') }}">Mi cuenta</a></li>
                     </ul>
                 </div>
             </div>
@@ -328,8 +329,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 200);
     });
 });
-
-
 </script>
 
 </body>

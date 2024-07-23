@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Factura</title>
+</head>
+<body>
+    <h1>Factura</h1>
+    <style>
+    th, td {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    </style>
+    <table>
+        <tr>
+            <th>Descripción</th>
+            <th>Cantidad</th>
+            <th>Costo Unitario</th>
+            <th>Total</th>
+        </tr>
+        <tr>
+            <td>Solid (Área Total)</td>
+            <td>{{ total_m2 }}</td>
+            <td>{{ solid_costo_unitario }}</td>
+            <td>{{ area_solid }}</td>
+        </tr>
+        <tr>
+            <td>Pegamento</td>
+            <td>{{ pegamento}}</td>
+            <td>{{ precio_pegamento }}</td>
+            <td>{{ costo_pegamento }}</td>
+        </tr>
+        <tr>
+            <td>Lijas</td>
+            <td>0</td>
+            <td>{{ precio_lija }}</td>
+            <td>{{ lijas }}</td>
+        </tr>
+        <tr>
+            <td>p404</td>
+            <td>{{ p404 }}</td>
+            <td>{{ precio_p404 }}</td>
+            <td>{{ costo_p404 }}</td>
+        </tr>
+        <tr>
+            <td>Mecanizado</td>
+            <td>{{ mecanizado }}</td>
+            <td>{{ precio_mecanizado }}</td>
+            <td>{{ costo_mecanizado }}</td>
+        </tr>
+        <tr>
+            <td>Peon</td>
+            <td>{{ peon }}</td>
+            <td>{{ precio_mecanizado_peon }}</td>
+            <td>{{ costo_mecanizado_peon }}</td>
+        </tr>
+            <tr>
+            <td>Fregadero</td>
+            <td>0</td>
+            <td>{{ fregadero }}</td>
+            <td>{{ fregadero }}</td>
+        </tr>
+        
+        {% if tipo_fregadero == 'solid' %}
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;- Modelo Solid</td>
+            <td>0</td>
+            <td>{{ modelo_solid }}</td>
+            <td>{{ modelo_solid }}</td>
+        </tr>
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;- Mecanizado Solid</td>
+            <td>0</td>
+            <td>{{ mecanizado_solid }}</td>
+            <td>{{ mecanizado_solid }}</td>
+        </tr>
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;- Mano de Obra Solid</td>
+            <td>0</td>
+            <td>{{ mano_obra_solid }}</td>
+            <td>{{ mano_obra_solid }}</td>
+        </tr>
+        {% elif tipo_fregadero == 'acero' %}
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;- Mano de Obra Acero</td>
+            <td>0</td>
+            <td>{{ mano_obra_acero }}</td>
+            <td>{{ mano_obra_acero }}</td>
+        </tr>
+        {% endif %}
+
+        </tr>
+        <tr>
+            <td>Valvula</td>
+            <td>0</td>
+            <td>{{ valvula }}</td>
+            <td>{{ valvula }}</td>
+        </tr>
+        <tr>
+            <td>Colocacion</td>
+            <td>0</td>
+            <td>{{ colocacion }}</td>
+            <td>{{ colocacion }}</td>
+        </tr>
+        <tr>
+            <td>Desplazamiento</td>
+            <td>0</td>
+            <td>{{ distancia_km }}</td>
+            <td>{{ costo_desplazamiento }}</td>
+        </tr>
+        <tr>
+            <td>Cantos</td>
+            <td>{{ metros_canto }}</td>
+            <td>{{ costo_canto }}</td>
+            <td>{{ metros_canto * costo_canto }}</td>
+        </tr>
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;- Tipo de Canto ({{ tipo_canto }})</td>
+            <td>0</td>
+            <td>{{ costo_canto }}</td>
+            <td>{{ costo_canto }}</td>
+        </tr>
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;- Medida de Canto ({{ medida_canto }})</td>
+            <td>0</td>
+            <td>{{ costo_canto }}</td>
+            <td>{{ costo_canto }}</td>
+        </tr>
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;- Pegamento para Cantos</td>
+            <td>0</td>
+            <td>{{ costo_pegamento }}</td>
+            <td>{{ costo_pegamento }}</td>
+        </tr>
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;- Lijas para Cantos</td>
+            <td>0</td>
+            <td>{{ costo_lijas }}</td>
+            <td>{{ costo_lijas }}</td>
+        </tr>
+        {% if tipo_presupuesto == 'isla' %}
+        <tr>
+            <td>Costado</td>
+            <td>0</td>
+            <td>{{ costado }}</td>
+            <td>{{ costado }}</td>
+        </tr>
+        {% endif %}
+    </table>
+    <h2>Total: {{ presupuesto }}</h2>
+
+    <!-- Botón para volver a la página de inicio -->
+    <form action="/" method="GET">
+        <button type="submit">Volver</button>
+    </form>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Factura</title>
+    <!-- Incluye la biblioteca xlsx -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.0/xlsx.full.min.js"></script>
+    <script>
+        function exportToExcel() {
+            // Obtén los datos del formulario en la página de factura.html
+            var area_solid = parseFloat("{{ area_solid }}");
+            var pegamento = parseFloat("{{ pegamento }}");
+            var lijas = parseFloat("{{ lijas }}");
+            var p404 = parseFloat("{{ p404 }}");
+            var mecanizado = parseFloat("{{ mecanizado }}");
+            var peon = parseFloat("{{ peon }}");
+            var fregadero = parseFloat("{{ fregadero }}");
+            var valvula = parseFloat("{{ valvula }}");
+            var colocacion = parseFloat("{{ colocacion }}");
+            var desplazamiento = parseFloat("{{ costo_desplazamiento }}");
+            var costado = parseFloat("{{ costado }}");
+            var tipo_presupuesto = "{{ tipo_presupuesto }}";
+
+            // Crea un objeto de datos para el archivo Excel
+            var data = [
+                ["Área de Solid", area_solid],
+                ["Pegamento", pegamento],
+                ["Lijas", lijas],
+                ["p404", p404],
+                ["Mecanizado", mecanizado],
+                ["Peon", peon],
+                ["fregadero", fregadero],
+                ["Valvula", valvula],
+                ["Colocacion", colocacion],
+                ["Desplazamiento", desplazamiento],
+                ["Costado de Isla", costado]
+            ];
+
+            // Crea un libro de trabajo de Excel
+            var wb = XLSX.utils.book_new();
+            var ws = XLSX.utils.aoa_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, "Presupuesto");
+
+            // Genera un archivo XLSX y proporciona un enlace de descarga
+            XLSX.writeFile(wb, "presupuesto.xlsx");
+        }
+    </script>
+</head>
+<body>
+    <h1>Factura</h1>
+    <p>Área de Solid: {{ area_solid }}</p>
+    <p>Pegamento: {{ pegamento }}</p>
+    <p>Lijas: {{ lijas }}</p>
+    <p>p404: {{ p404 }}</p>
+    <p>Mecanizado: {{ mecanizado }}</p>
+    <p>Peon: {{ peon }}</p>
+    <p>Fregadero: {{ fregadero }}</p>
+    <p>Valvula: {{ valvula }}</p>
+    <p>Colocacion: {{ colocacion }}</p>
+    <p>Desplazamiento: {{ desplazamiento }}</p>
+        <h2>Detalle del Desplazamiento</h2>
+    <p>Distancia de desplazamiento: {{ distancia_km }} km</p>
+    <p>Costo de desplazamiento: ${{ costo_desplazamiento }}</p>
+    {% if tipo_presupuesto == 'isla' %}
+    <p>Costado de Isla: {{ costado }}</p>
+    {% endif %}
+    <button type="button" onclick="exportToExcel()">Exportar a Excel</button>
+</body>
+</html>

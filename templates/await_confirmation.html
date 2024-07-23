@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmación de Cuenta</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h2>Esperando Confirmación de Cuenta</h2>
+        <p>Se ha enviado un correo de confirmación a <strong>{{ email }}</strong>. Por favor, revisa tu correo electrónico y sigue las instrucciones para confirmar tu cuenta.</p>
+    </div>
+    
+    <script>
+        $(document).ready(function(){
+            function checkConfirmation() {
+                $.ajax({
+                    url: "{{ url_for('check_confirmation_status') }}",
+                    method: "POST",
+                    data: { email: "{{ email }}" },
+                    success: function(response) {
+                        if (response.confirmed) {
+                            window.location.href = "{{ url_for('index') }}";
+                        }
+                    },
+                    error: function(error) {
+                        console.error("Error al verificar el estado de confirmación:", error);
+                    }
+                });
+            }
+
+            setInterval(checkConfirmation, 5000); // Verificar cada 5 segundos
+        });
+    </script>
+</body>
+</html>
