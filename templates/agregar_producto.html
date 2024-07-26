@@ -1,9 +1,10 @@
-{% extends 'admin_base.html' %}
+{% extends 'base.html' %}
 
 {% block content %}
 <div class="container mt-5">
-    <h2>Añadir Producto</h2>
-    <form method="POST" enctype="multipart/form-data">
+    <h2>Agregar Producto</h2>
+    <form action="{{ url_for('agregar_producto') }}" method="POST" enctype="multipart/form-data">
+        <!-- Campos del producto -->
         <div class="form-group">
             <label for="nombre">Nombre</label>
             <input type="text" class="form-control" id="nombre" name="nombre" required>
@@ -24,15 +25,34 @@
             <label for="categoria_id">Categoría</label>
             <select class="form-control" id="categoria_id" name="categoria_id" required>
                 {% for categoria in categorias %}
-                    <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
+                <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
                 {% endfor %}
             </select>
         </div>
+        <!-- Campos para especificaciones -->
+        <div class="form-group">
+            <label for="especificaciones">Especificaciones</label>
+            <div id="especificaciones-container">
+                <input type="text" class="form-control mb-2" name="especificaciones" required>
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="agregarEspecificacion()">Agregar otra especificación</button>
+        </div>
         <div class="form-group">
             <label for="imagen">Imagen</label>
-            <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*" required>
+            <input type="file" class="form-control-file" id="imagen" name="imagen" required>
         </div>
         <button type="submit" class="btn btn-primary">Agregar Producto</button>
     </form>
 </div>
+
+<script>
+function agregarEspecificacion() {
+    var container = document.getElementById('especificaciones-container');
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'form-control mb-2';
+    input.name = 'especificaciones';
+    container.appendChild(input);
+}
+</script>
 {% endblock %}

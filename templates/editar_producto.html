@@ -1,71 +1,78 @@
-{% extends 'admin_base.html' %}
+{% extends 'base.html' %}
 
 {% block content %}
 <div class="container mt-5">
     <h2>Editar Producto</h2>
-    <form method="post" action="{{ url_for('editar_producto', producto_id=producto.id) }}" enctype="multipart/form-data">
-        <div class="form-group row">
-            <label for="nombre" class="col-sm-2 col-form-label">Nombre:</label>
-            <div class="col-sm-10">
-                <input type="text" class="form-control" id="nombre" name="nombre" value="{{ producto.nombre }}" required>
-            </div>
+    <form action="{{ url_for('editar_producto', producto_id=producto.id) }}" method="POST" enctype="multipart/form-data">
+        <!-- Campos del producto -->
+        <div class="form-group">
+            <label for="nombre">Nombre</label>
+            <input type="text" class="form-control" id="nombre" name="nombre" value="{{ producto.nombre }}" required>
         </div>
-        <div class="form-group row">
-            <label for="descripcion" class="col-sm-2 col-form-label">Descripción:</label>
-            <div class="col-sm-10">
-                <textarea class="form-control" id="descripcion" name="descripcion" required>{{ producto.descripcion }}</textarea>
-            </div>
+        <div class="form-group">
+            <label for="descripcion">Descripción</label>
+            <textarea class="form-control" id="descripcion" name="descripcion" required>{{ producto.descripcion }}</textarea>
         </div>
-        <div class="form-group row">
-            <label for="precio" class="col-sm-2 col-form-label">Precio:</label>
-            <div class="col-sm-10">
-                <input type="number" step="0.01" class="form-control" id="precio" name="precio" value="{{ producto.precio }}" required>
-            </div>
+        <div class="form-group">
+            <label for="precio">Precio</label>
+            <input type="number" class="form-control" id="precio" name="precio" step="0.01" value="{{ producto.precio }}" required>
         </div>
-        <div class="form-group row">
-            <label for="stock" class="col-sm-2 col-form-label">Stock:</label>
-            <div class="col-sm-10">
-                <input type="number" class="form-control" id="stock" name="stock" value="{{ producto.stock }}" required>
-            </div>
+        <div class="form-group">
+            <label for="stock">Stock</label>
+            <input type="number" class="form-control" id="stock" name="stock" value="{{ producto.stock }}" required>
         </div>
-        <div class="form-group row">
-            <label for="categoria" class="col-sm-2 col-form-label">Categoría:</label>
-            <div class="col-sm-10">
-                <select class="form-control" id="categoria" name="categoria_id" required>
-                    {% for categoria in categorias %}
-                    <option value="{{ categoria.id }}" {% if categoria.id == producto.categoria_id %}selected{% endif %}>{{ categoria.nombre }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+        <div class="form-group">
+            <label for="categoria_id">Categoría</label>
+            <select class="form-control" id="categoria_id" name="categoria_id" required>
+                {% for categoria in categorias %}
+                <option value="{{ categoria.id }}" {% if categoria.id == producto.categoria_id %}selected{% endif %}>{{ categoria.nombre }}</option>
+                {% endfor %}
+            </select>
         </div>
-        <div class="form-group row">
-            <label for="imagen" class="col-sm-2 col-form-label">Imagen:</label>
-            <div class="col-sm-10">
-                <input type="file" class="form-control-file" id="imagen" name="imagen">
-            </div>
-        </div>
-        <div class="form-group row">
-            <div class="col-sm-10 offset-sm-2">
-                <button type="submit" class="btn btn-primary">Guardar cambios</button>
-            </div>
-        </div>
-    </form>
-
-    <h3>Imágenes del Producto</h3>
-    <div class="row">
-        {% for imagen in producto.imagenes %}
-        <div class="col-6 col-md-3">
-            <div class="card mb-3">
-                <img src="{{ url_for('static', filename='uploads/' ~ imagen.url) }}" class="card-img-top img-thumbnail" alt="Imagen del producto">
-                <div class="card-body p-2">
-                    <form method="post" action="{{ url_for('eliminar_imagen', imagen_id=imagen.id) }}">
-                        <input type="hidden" name="producto_id" value="{{ producto.id }}">
-                        <button type="submit" class="btn btn-danger btn-block">Eliminar</button>
-                    </form>
+        <!-- Campos para especificaciones -->
+        <div class="form-group">
+            <label for="especificaciones">Especificaciones</label>
+            <div id="especificaciones-container">
+                {% for especificacion in especificaciones %}
+                <div class="input-group mb-2">
+                    <input type="text" class="form-control" name="especificaciones" value="{{ especificacion.descripcion }}" required>
+                    <div class="input-group-append">
+                        <form action="{{ url_for('eliminar_especificacion', especificacion_id=especificacion.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-danger">Eliminar</button>
+                        </form>
+                    </div>
                 </div>
+                {% endfor %}
             </div>
+            <button type="button" class="btn btn-secondary" onclick="agregarEspecificacion()">Agregar otra especificación</button>
         </div>
-        {% endfor %}
-    </div>
+        <div class="form-group">
+            <label for="imagen">Imagen</label>
+            <input type="file" class="form-control-file" id="imagen" name="imagen">
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+    </form>
 </div>
+
+<script>
+function agregarEspecificacion() {
+    var container = document.getElementById('especificaciones-container');
+    var inputGroup = document.createElement('div');
+    inputGroup.className = 'input-group mb-2';
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'form-control';
+    input.name = 'especificaciones';
+    input.required = true;
+
+    var inputGroupAppend = document.createElement('div');
+    inputGroupAppend.className = 'input-group-append';
+
+    inputGroup.appendChild(input);
+    inputGroup.appendChild(inputGroupAppend);
+
+    container.appendChild(inputGroup);
+}
+</script>
 {% endblock %}

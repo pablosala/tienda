@@ -90,16 +90,17 @@
     </div>
 
     <div class="fh5co-tab-content tab-content" data-tab-content="2">
-        <div class="col-md-10 col-md-offset-1">
-            <h3 class="tab-button" data-tab="2">Especificaciones del Producto</h3>
-            <ul>
-                <li>Especificación 1</li>
-                <li>Especificación 2</li>
-                <li>Especificación 3</li>
-                <li>Especificación 4</li>
-            </ul>
-        </div>
-    </div>
+                <div class="col-md-10 col-md-offset-1">
+                    <h3 class="tab-button" data-tab="2">Especificaciones del Producto</h3>
+                    <ul>
+                        {% for especificacion in especificaciones %}
+                        <li>{{ especificacion.descripcion }}</li>
+                        {% else %}
+                        <li>Este producto no tiene especificaciones.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
 
     <div class="fh5co-tab-content tab-content" data-tab-content="3">
     <div class="col-md-10 col-md-offset-1">

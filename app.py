@@ -21,6 +21,9 @@ import base64
 from Crypto.Cipher import DES3
 import hmac
 import hashlib
+import uuid
+
+
 # Configurar la zona horaria de Madrid
 madrid_tz = pytz.timezone('Europe/Madrid')
 
@@ -69,7 +72,6 @@ class Usuario(UserMixin, db.Model):
     is_confirmed = db.Column(db.Boolean, default=False)
     ordenes = db.relationship('Orden', backref='usuario', lazy=True)
     direcciones = db.relationship('Direccion', backref='usuario', lazy=True)
-    metodos_pago = db.relationship('MetodoPago', backref='usuario', lazy=True)
     carrito = db.relationship('Carrito', backref='usuario', uselist=False)
     valoraciones = db.relationship('Valoracion', backref='autor', lazy=True)
 
@@ -115,7 +117,15 @@ class Producto(db.Model):
     ordenes = db.relationship('OrdenProducto', backref='producto', lazy=True)
     imagenes = db.relationship('Imagen', backref='producto', lazy=True, cascade="all, delete-orphan")
     valoraciones = db.relationship('Valoracion', backref='producto_valoraciones', lazy=True)
+    especificaciones = db.relationship('Especificacion', backref='producto', lazy=True, cascade="all, delete-orphan")
 
+
+class Especificacion(db.Model):
+    __tablename__ = 'especificacion'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    descripcion = db.Column(db.String(255), nullable=False)
+    producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
 
 class Imagen(db.Model):
     __tablename__ = 'imagen'
@@ -133,11 +143,12 @@ class Orden(db.Model):
     fecha_actualizacion = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     direccion_envio_id = db.Column(db.Integer, db.ForeignKey('direccion.id'), nullable=False)
-    metodo_pago_id = db.Column(db.Integer, db.ForeignKey('metodo_pago.id'), nullable=False)
+    metodo_pago = db.Column(db.String(50), nullable=False)  # Nuevo campo para el método de pago
     total = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='Pending')
     notas = db.Column(db.Text, nullable=True)
     productos = db.relationship('OrdenProducto', backref='orden', lazy=True, cascade="all, delete-orphan")
+
 
 
 class OrdenProducto(db.Model):
@@ -179,17 +190,6 @@ class Direccion(db.Model):
     pais = db.Column(db.String(100), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     ordenes = db.relationship('Orden', backref='direccion_envio', lazy=True)
-
-
-class MetodoPago(db.Model):
-    __tablename__ = 'metodo_pago'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    tipo = db.Column(db.String(50), nullable=False)
-    numero = db.Column(db.String(20), nullable=False)
-    expiracion = db.Column(db.String(7), nullable=False)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
-    ordenes = db.relationship('Orden', backref='metodo_pago', lazy=True)
 
 
 class Valoracion(db.Model):
@@ -285,10 +285,11 @@ def login():
             flash('Credenciales inválidas', 'danger')
     return render_template('login.html')
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
 @login_required
 def logout():
     logout_user()
+    flash('Has cerrado sesión exitosamente.', 'success')
     return redirect(url_for('index'))
 
 @app.route('/')
@@ -339,9 +340,8 @@ def detalles_cuenta():
     
     ordenes = Orden.query.filter_by(usuario_id=current_user.id).all()
     direcciones = Direccion.query.filter_by(usuario_id=current_user.id).all()
-    metodos_pago = MetodoPago.query.filter_by(usuario_id=current_user.id).all()
     
-    return render_template('detalles_cuenta.html', title='Detalles de la cuenta', user=current_user, ordenes=ordenes, direcciones=direcciones, metodos_pago=metodos_pago)
+    return render_template('detalles_cuenta.html', title='Detalles de la cuenta', user=current_user, ordenes=ordenes, direcciones=direcciones)
 
 
 @app.route('/direccion/nueva', methods=['GET', 'POST'])
@@ -427,6 +427,7 @@ def eliminar_metodo_pago(metodo_id):
     return redirect(url_for('detalles_cuenta'))
 
 
+
 def encrypt_3DES(message, key):
     key = base64.b64decode(key)
     des3 = DES3.new(key, DES3.MODE_CBC, b'\0\0\0\0\0\0\0\0')
@@ -451,7 +452,7 @@ def checkout():
 
     if request.method == 'POST':
         direccion_envio_id = request.form.get('direccion_envio')
-        metodo_pago_id = request.form.get('metodo_pago')
+        metodo_pago = request.form.get('metodo_pago')
 
         # Validar y manejar nueva dirección
         if direccion_envio_id == 'nueva':
@@ -471,80 +472,101 @@ def checkout():
             flash('Por favor seleccione o añada una dirección de envío.', 'danger')
             return redirect(url_for('checkout'))
 
-        # Validar y manejar nuevo método de pago
-        if metodo_pago_id == 'nuevo':
-            nuevo_metodo_pago = MetodoPago(
-                tipo=request.form['tipo_pago'],
-                numero=request.form['numero_pago'],
-                expiracion=request.form['expiracion_pago'],
-                usuario_id=usuario_id
-            )
-            db.session.add(nuevo_metodo_pago)
-            db.session.flush()
-            metodo_pago_id = nuevo_metodo_pago.id
-        elif not metodo_pago_id:
-            flash('Por favor seleccione o añada un método de pago.', 'danger')
+        if not metodo_pago:
+            flash('Por favor seleccione un método de pago.', 'danger')
             return redirect(url_for('checkout'))
 
-        # Crear un nuevo pedido
-        pedido = Orden(
-            usuario_id=usuario_id,
-            direccion_envio_id=direccion_envio_id,
-            metodo_pago_id=metodo_pago_id,
-            total=sum(item.cantidad * item.producto.precio for item in carrito.items),
-            status='Pending'
-        )
-        db.session.add(pedido)
-        db.session.commit()
-
-        # Mover los items del carrito al pedido
-        for item in carrito.items:
-            orden_producto = OrdenProducto(
-                orden_id=pedido.id,
-                producto_id=item.producto_id,
-                cantidad=item.cantidad,
-                precio=item.producto.precio
-            )
-            db.session.add(orden_producto)
-            db.session.delete(item)  # Eliminar los items del carrito
-        db.session.commit()
+        # Calcular el total del pedido
+        total_pedido = sum(item.cantidad * item.producto.precio for item in carrito.items)
 
         # Redirigir a la pasarela de pago de Redsys
-        amount = pedido.total
-        order_id = f'{pedido.id:06d}'  # Asegúrate de que el ID del pedido tiene 6 dígitos
+        order_id = f'{uuid.uuid4().hex[:6]}'  # Generar un identificador único para la orden
 
         # Preparar los datos para la petición al TPV
         merchant_parameters = {
-            'DS_MERCHANT_AMOUNT': str(int(float(amount) * 100)),
+            'DS_MERCHANT_AMOUNT': str(int(float(total_pedido) * 100)),
             'DS_MERCHANT_ORDER': order_id,
             'DS_MERCHANT_MERCHANTCODE': app.config['TPV_MERCHANT_CODE'],
             'DS_MERCHANT_CURRENCY': app.config['TPV_CURRENCY'],
             'DS_MERCHANT_TRANSACTIONTYPE': app.config['TPV_TRANSACTION_TYPE'],
             'DS_MERCHANT_TERMINAL': app.config['TPV_TERMINAL'],
             'DS_MERCHANT_MERCHANTURL': app.config['TPV_CALLBACK_URL'],
-            'DS_MERCHANT_URLOK': url_for('callback', _external=True),
-            'DS_MERCHANT_URLKO': url_for('callback', _external=True)
+            'DS_MERCHANT_URLOK': url_for('callback_ok', _external=True),
+            'DS_MERCHANT_URLKO': url_for('callback_ko', _external=True)
         }
-
-        # Debug: Imprimir merchant_parameters
-        print("Merchant Parameters:", merchant_parameters)
 
         merchant_parameters_base64 = base64.b64encode(json.dumps(merchant_parameters).encode('utf-8')).decode('utf-8')
         key = encrypt_3DES(order_id, app.config['TPV_SECRET_KEY'])
         signature = calculate_hmac(key, merchant_parameters_base64)
 
+        # Guardar datos temporales en la sesión
+        session['order_data'] = {
+            'usuario_id': usuario_id,
+            'direccion_envio_id': direccion_envio_id,
+            'metodo_pago': metodo_pago,
+            'total': total_pedido,
+            'order_id': order_id
+        }
+
         return render_template('tpv_form.html', merchant_parameters=merchant_parameters_base64, signature=signature)
 
     direcciones = Direccion.query.filter_by(usuario_id=usuario_id).all()
-    metodos_pago = MetodoPago.query.filter_by(usuario_id=usuario_id).all()
     carrito_items = CarritoItem.query.filter_by(carrito_id=carrito.id).all()
-    return render_template('checkout.html', title='Finalizar Compra', carrito_items=carrito_items, direcciones=direcciones, metodos_pago=metodos_pago, user=current_user)
+    return render_template('checkout.html', title='Finalizar Compra', carrito_items=carrito_items, direcciones=direcciones, user=current_user)
 
-@app.route('/callback', methods=['POST'])
-def callback():
-    data = request.form
-    # Manejar la respuesta del TPV (ej. confirmar el pago, actualizar el estado del pedido, etc.)
-    return '', 200
+
+@app.route('/callback_ok', methods=['POST'])
+@login_required
+def callback_ok():
+    order_data = session.get('order_data')
+    if not order_data:
+        flash('Error en la confirmación del pago.', 'danger')
+        return redirect(url_for('index'))
+
+    usuario_id = order_data['usuario_id']
+    direccion_envio_id = order_data['direccion_envio_id']
+    metodo_pago = order_data['metodo_pago']
+    total_pedido = order_data['total']
+
+    # Crear un nuevo pedido
+    pedido = Orden(
+        usuario_id=usuario_id,
+        direccion_envio_id=direccion_envio_id,
+        metodo_pago=metodo_pago,
+        total=total_pedido,
+        status='Confirmed'
+    )
+    db.session.add(pedido)
+    db.session.commit()
+
+    carrito = Carrito.query.filter_by(usuario_id=usuario_id).first()
+
+    # Mover los items del carrito al pedido
+    for item in carrito.items:
+        orden_producto = OrdenProducto(
+            orden_id=pedido.id,
+            producto_id=item.producto_id,
+            cantidad=item.cantidad,
+            precio=item.producto.precio
+        )
+        db.session.add(orden_producto)
+        db.session.delete(item)  # Eliminar los items del carrito
+    db.session.commit()
+
+    # Vaciar el carrito del usuario
+    carrito.items = []
+    db.session.commit()
+
+    flash('Pedido realizado con éxito.', 'success')
+    return redirect(url_for('index'))
+
+@app.route('/callback_ko', methods=['POST'])
+@login_required
+def callback_ko():
+    flash('El pago no ha sido completado. Inténtelo nuevamente.', 'danger')
+    return redirect(url_for('checkout'))
+
+
 def calcular_total_carrito(carrito_id):
     carrito_items = CarritoItem.query.filter_by(carrito_id=carrito_id).all()
     total = sum(item.cantidad * item.producto.precio for item in carrito_items)
@@ -591,6 +613,7 @@ def category_products(category_id):
 def producto_detalle(producto_id):
     producto = Producto.query.get_or_404(producto_id)
     ha_comprado = Orden.query.filter_by(usuario_id=current_user.id).join(OrdenProducto).filter_by(producto_id=producto_id).all()
+    especificaciones = Especificacion.query.filter_by(producto_id=producto_id).all()
 
     if request.method == 'POST':
         puntuacion = int(request.form['puntuacion'])
@@ -615,7 +638,7 @@ def producto_detalle(producto_id):
         flash('Gracias por tu valoración!', 'success')
         return redirect(url_for('producto_detalle', producto_id=producto_id))
 
-    return render_template('single.html', producto=producto, ha_comprado=ha_comprado)
+    return render_template('single.html', producto=producto, ha_comprado=ha_comprado, especificaciones=especificaciones)
 
 
 @app.route('/agregar_carrito/<int:producto_id>', methods=['POST'])
@@ -650,7 +673,34 @@ def agregar_carrito(producto_id):
 def carrito():
     carrito = Carrito.query.filter_by(usuario_id=current_user.id).first()
     items = carrito.items if carrito else []
-    return render_template('carrito.html', items=items)
+    total = sum(item.cantidad * item.producto.precio for item in items)
+    return render_template('carrito.html', items=items, total=total)
+
+
+@app.route('/carrito/actualizar', methods=['POST'])
+@login_required
+def actualizar_carrito():
+    producto_id = request.form.get('producto_id')
+    cantidad = int(request.form.get('cantidad'))
+
+    item = CarritoItem.query.filter_by(carrito_id=current_user.carrito.id, producto_id=producto_id).first()
+    if item:
+        item.cantidad = cantidad
+        db.session.commit()
+        flash('Cantidad actualizada correctamente.', 'success')
+    return redirect(url_for('carrito'))
+
+@app.route('/carrito/eliminar', methods=['POST'])
+@login_required
+def eliminar_del_carrito():
+    producto_id = request.form.get('producto_id')
+
+    item = CarritoItem.query.filter_by(carrito_id=current_user.carrito.id, producto_id=producto_id).first()
+    if item:
+        db.session.delete(item)
+        db.session.commit()
+        flash('Producto eliminado del carrito.', 'success')
+    return redirect(url_for('carrito'))
 
 
 @app.route('/realizar_pedido', methods=['POST'])
@@ -780,15 +830,22 @@ def admin_products():
 def agregar_producto():
     if current_user.role != 'admin':
         return redirect(url_for('index'))
+    
     if request.method == 'POST':
         nombre = request.form['nombre']
         descripcion = request.form['descripcion']
         precio = float(request.form['precio'])
         stock = int(request.form['stock'])
         categoria_id = int(request.form['categoria_id'])
+        especificaciones = request.form.getlist('especificaciones')
+
         producto = Producto(nombre=nombre, descripcion=descripcion, precio=precio, stock=stock, categoria_id=categoria_id)
         db.session.add(producto)
         db.session.commit()
+        
+        for especificacion in especificaciones:
+            nueva_especificacion = Especificacion(descripcion=especificacion, producto_id=producto.id)
+            db.session.add(nueva_especificacion)
         
         # Guardar la imagen
         if 'imagen' not in request.files:
@@ -805,8 +862,10 @@ def agregar_producto():
             db.session.add(imagen)
             db.session.commit()
         
+        db.session.commit()
         flash('Producto agregado con éxito', 'success')
-        return redirect(url_for('admin'))
+        return redirect(url_for('admin_products'))
+    
     categorias = Categoria.query.all()
     return render_template('agregar_producto.html', categorias=categorias)
 
@@ -826,6 +885,13 @@ def editar_producto(producto_id):
         producto.categoria_id = int(request.form['categoria_id'])
         db.session.commit()
         
+        # Actualizar las especificaciones
+        especificaciones = request.form.getlist('especificaciones')
+        Especificacion.query.filter_by(producto_id=producto.id).delete()
+        for especificacion in especificaciones:
+            nueva_especificacion = Especificacion(descripcion=especificacion, producto_id=producto.id)
+            db.session.add(nueva_especificacion)
+        
         # Guardar la imagen
         if 'imagen' in request.files:
             file = request.files['imagen']
@@ -834,13 +900,28 @@ def editar_producto(producto_id):
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 imagen = Imagen(url=filename, producto_id=producto.id)
                 db.session.add(imagen)
-                db.session.commit()
         
+        db.session.commit()
         flash('Producto editado con éxito', 'success')
-        return redirect(url_for('admin'))
+        return redirect(url_for('admin_products'))
     
     categorias = Categoria.query.all()
-    return render_template('editar_producto.html', producto=producto, categorias=categorias)
+    especificaciones = Especificacion.query.filter_by(producto_id=producto.id).all()
+    return render_template('editar_producto.html', producto=producto, categorias=categorias, especificaciones=especificaciones)
+
+@app.route('/admin/eliminar_especificacion/<int:especificacion_id>', methods=['POST'])
+@login_required
+def eliminar_especificacion(especificacion_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+    
+    especificacion = Especificacion.query.get_or_404(especificacion_id)
+    producto_id = especificacion.producto_id
+    db.session.delete(especificacion)
+    db.session.commit()
+    flash('Especificación eliminada con éxito', 'success')
+    return redirect(url_for('editar_producto', producto_id=producto_id))
+
 
 @app.route('/admin/eliminar_imagen/<int:imagen_id>', methods=['POST'])
 @login_required
@@ -878,7 +959,7 @@ def eliminar_producto(producto_id):
     db.session.delete(producto)
     db.session.commit()
     flash('Producto eliminado con éxito', 'success')
-    return redirect(url_for('admin'))
+    return redirect(url_for('admin_products'))
 
 @app.route('/admin/ver_pedidos')
 @login_required

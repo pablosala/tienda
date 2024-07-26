@@ -40,25 +40,11 @@ Finalizar Compra
         <!-- Métodos de Pago -->
         <div class="form-group">
             <label for="metodo_pago">Método de Pago</label>
-            {% if metodos_pago %}
-                <select class="form-control" id="metodo_pago" name="metodo_pago" required>
-                    {% for metodo in metodos_pago %}
-                    <option value="{{ metodo.id }}">{{ metodo.tipo }} - {{ metodo.numero }}</option>
-                    {% endfor %}
-                    <option value="nuevo" id="nuevo-metodo-opcion">Añadir nuevo método de pago</option>
-                </select>
-                <div id="nuevo-metodo" style="display:none;">
-                    <input type="text" class="form-control mt-2" name="tipo_pago" placeholder="Tipo de Pago">
-                    <input type="text" class="form-control mt-2" name="numero_pago" placeholder="Número de Tarjeta">
-                    <input type="text" class="form-control mt-2" name="expiracion_pago" placeholder="Fecha de Expiración (MM/AA)">
-                </div>
-            {% else %}
-                <div id="nuevo-metodo">
-                    <input type="text" class="form-control mt-2" name="tipo_pago" placeholder="Tipo de Pago" required>
-                    <input type="text" class="form-control mt-2" name="numero_pago" placeholder="Número de Tarjeta" required>
-                    <input type="text" class="form-control mt-2" name="expiracion_pago" placeholder="Fecha de Expiración (MM/AA)" required>
-                </div>
-            {% endif %}
+            <select class="form-control" id="metodo_pago" name="metodo_pago" required>
+                <option value="Tarjeta">Tarjeta</option>
+                <option value="Apple Pay">Apple Pay</option>
+                <option value="Bizum">Bizum</option>
+            </select>
         </div>
         <h3>Resumen del Pedido</h3>
         <table class="table">
@@ -89,11 +75,6 @@ Finalizar Compra
     document.getElementById('direccion_envio').addEventListener('change', function() {
         var nuevaDireccion = document.getElementById('nueva-direccion');
         nuevaDireccion.style.display = this.value === "nueva" ? 'block' : 'none';
-    });
-
-    document.getElementById('metodo_pago').addEventListener('change', function() {
-        var nuevoMetodo = document.getElementById('nuevo-metodo');
-        nuevoMetodo.style.display = this.value === "nuevo" ? 'block' : 'none';
     });
 </script>
 {% endblock %}

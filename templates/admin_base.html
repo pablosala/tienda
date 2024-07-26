@@ -168,6 +168,9 @@
     </style>
 </head>
 <body>
+    <div class="fh5co-loader"></div>
+
+<div id="page">
     <nav class="fh5co-nav" role="navigation">
         <div class="container">
             <div class="row">
@@ -186,6 +189,7 @@
                         <li class="has-dropdown">
                             <a href="{{ url_for('index') }}" id="tienda-link">Tienda</a>
                             <ul class="dropdown">
+                                <li><a href="{{ url_for('customize_countertop') }}">Diseñar Encimera</a></li>
                                 {% for categoria in categorias %}
                                     <li><a href="{{ url_for('categoria_productos', categoria_id=categoria.id) }}">{{ categoria.nombre }}</a></li>
                                 {% endfor %}
@@ -206,6 +210,7 @@
             </div>
         </div>
     </nav>
+
 
     <div id="wrapper">
         <!-- Sidebar -->

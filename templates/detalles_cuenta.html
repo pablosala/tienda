@@ -18,7 +18,10 @@ Detalles de la Cuenta
             <a class="nav-link" id="direcciones-tab" data-toggle="tab" href="#direcciones" role="tab" aria-controls="direcciones" aria-selected="false">Direcciones</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" id="metodos-tab" data-toggle="tab" href="#metodos" role="tab" aria-controls="metodos" aria-selected="false">Métodos de Pago</a>
+            <a class="nav-link" href="#" id="logout-link">Cerrar Sesión</a>
+            <form id="logout-form" action="{{ url_for('logout') }}" method="POST" style="display: none;">
+                <input type="hidden" name="logout" value="true">
+            </form>
         </li>
     </ul>
     <div class="tab-content" id="myTabContent">
@@ -73,26 +76,12 @@ Detalles de la Cuenta
                 {% endfor %}
             </div>
         </div>
-
-        <!-- Métodos de Pago -->
-        <div class="tab-pane fade" id="metodos" role="tabpanel" aria-labelledby="metodos-tab">
-            <div class="mt-4">
-                <a href="{{ url_for('nuevo_metodo_pago') }}" class="btn btn-primary mb-3">Añadir Nuevo Método</a>
-                {% for metodo in metodos_pago %}
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ metodo.tipo }}</h5>
-                            <p class="card-text">Número: {{ metodo.numero }}</p>
-                            <p class="card-text">Expiración: {{ metodo.expiracion }}</p>
-                            <a href="{{ url_for('editar_metodo_pago', metodo_id=metodo.id) }}" class="btn btn-secondary">Editar</a>
-                            <form action="{{ url_for('eliminar_metodo_pago', metodo_id=metodo.id) }}" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-danger">Eliminar</button>
-                            </form>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
     </div>
 </div>
+<script>
+    document.getElementById('logout-link').addEventListener('click', function(event) {
+        event.preventDefault();
+        document.getElementById('logout-form').submit();
+    });
+</script>
 {% endblock %}
