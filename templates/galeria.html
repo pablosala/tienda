@@ -1,6 +1,14 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+    .espacio{
+        margin-top: 70px;
+    }
+    .espacio2{
+        margin-top: 30px;
+    }
+</style>
 <div class="fh5co-loader"></div>
 
 <div id="page">
@@ -24,7 +32,7 @@
         <div class="container">
             <div class="row animate-box">
                 <div class="col-md-8 col-md-offset-2 text-center fh5co-heading">
-                    <span>Proyectos Recientes</span>
+                    <div class="espacio2"></div>
                     <h2>Nuestra Galería</h2>
                     <p>Aquí puedes ver algunas de nuestras obras y productos realizados con solid surface.</p>
                 </div>
@@ -42,13 +50,13 @@
             </div>
         </div>
     </div>
-
+<div class="espacio"></div>
     <div id="fh5co-started">
         <div class="container">
             <div class="row animate-box">
                 <div class="col-md-8 col-md-offset-2 text-center fh5co-heading">
-                    <h2>Newsletter</h2>
-                    <p>Mantente informado sobre nuestros últimos proyectos y novedades. Suscríbete ahora!</p>
+                    <h2>Boletín Informativo</h2>
+                    <p>Mantente al día con nuestros últimos productos. ¡Suscríbete ahora!</p>
                 </div>
             </div>
             <div class="row animate-box">
@@ -56,8 +64,8 @@
                     <form class="form-inline">
                         <div class="col-md-6 col-sm-6">
                             <div class="form-group">
-                                <label for="email" class="sr-only">Email</label>
-                                <input type="email" class="form-control" id="email" placeholder="Email">
+                                <label for="email" class="sr-only">Correo Electrónico</label>
+                                <input type="email" class="form-control" id="email" placeholder="Correo Electrónico">
                             </div>
                         </div>
                         <div class="col-md-6 col-sm-6">
@@ -68,5 +76,4 @@
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

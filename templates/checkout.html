@@ -16,15 +16,15 @@ Finalizar Compra
                     {% for direccion in direcciones %}
                     <option value="{{ direccion.id }}">{{ direccion.direccion }}, {{ direccion.ciudad }}, {{ direccion.provincia }}</option>
                     {% endfor %}
-                    <option value="" id="nueva-direccion-opcion">Añadir nueva dirección</option>
+                    <option value="nueva" id="nueva-direccion-opcion">Añadir nueva dirección</option>
                 </select>
                 <div id="nueva-direccion" style="display:none;">
-                    <input type="text" class="form-control mt-2" name="nombre_direccion" placeholder="Nombre" required>
-                    <input type="text" class="form-control mt-2" name="direccion" placeholder="Dirección" required>
-                    <input type="text" class="form-control mt-2" name="ciudad" placeholder="Ciudad" required>
-                    <input type="text" class="form-control mt-2" name="provincia" placeholder="Provincia" required>
-                    <input type="text" class="form-control mt-2" name="codigo_postal" placeholder="Código Postal" required>
-                    <input type="text" class="form-control mt-2" name="pais" placeholder="País" required>
+                    <input type="text" class="form-control mt-2" name="nombre_direccion" placeholder="Nombre">
+                    <input type="text" class="form-control mt-2" name="direccion" placeholder="Dirección">
+                    <input type="text" class="form-control mt-2" name="ciudad" placeholder="Ciudad">
+                    <input type="text" class="form-control mt-2" name="provincia" placeholder="Provincia">
+                    <input type="text" class="form-control mt-2" name="codigo_postal" placeholder="Código Postal">
+                    <input type="text" class="form-control mt-2" name="pais" placeholder="País">
                 </div>
             {% else %}
                 <div id="nueva-direccion">
@@ -45,12 +45,12 @@ Finalizar Compra
                     {% for metodo in metodos_pago %}
                     <option value="{{ metodo.id }}">{{ metodo.tipo }} - {{ metodo.numero }}</option>
                     {% endfor %}
-                    <option value="" id="nuevo-metodo-opcion">Añadir nuevo método de pago</option>
+                    <option value="nuevo" id="nuevo-metodo-opcion">Añadir nuevo método de pago</option>
                 </select>
                 <div id="nuevo-metodo" style="display:none;">
-                    <input type="text" class="form-control mt-2" name="tipo_pago" placeholder="Tipo de Pago" required>
-                    <input type="text" class="form-control mt-2" name="numero_pago" placeholder="Número de Tarjeta" required>
-                    <input type="text" class="form-control mt-2" name="expiracion_pago" placeholder="Fecha de Expiración (MM/AA)" required>
+                    <input type="text" class="form-control mt-2" name="tipo_pago" placeholder="Tipo de Pago">
+                    <input type="text" class="form-control mt-2" name="numero_pago" placeholder="Número de Tarjeta">
+                    <input type="text" class="form-control mt-2" name="expiracion_pago" placeholder="Fecha de Expiración (MM/AA)">
                 </div>
             {% else %}
                 <div id="nuevo-metodo">
@@ -88,12 +88,12 @@ Finalizar Compra
 <script>
     document.getElementById('direccion_envio').addEventListener('change', function() {
         var nuevaDireccion = document.getElementById('nueva-direccion');
-        nuevaDireccion.style.display = this.value === "" ? 'block' : 'none';
+        nuevaDireccion.style.display = this.value === "nueva" ? 'block' : 'none';
     });
 
     document.getElementById('metodo_pago').addEventListener('change', function() {
         var nuevoMetodo = document.getElementById('nuevo-metodo');
-        nuevoMetodo.style.display = this.value === "" ? 'block' : 'none';
+        nuevoMetodo.style.display = this.value === "nuevo" ? 'block' : 'none';
     });
 </script>
 {% endblock %}

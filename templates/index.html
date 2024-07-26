@@ -12,7 +12,36 @@ Tienda - Inicio
     margin-left: 20px;
     margin-right: 20px;
  }
-    
+
+ /* Estilos para títulos y textos responsivos */
+.heading-responsive {
+    font-size: 3em; /* Tamaño del texto por defecto */
+}
+
+.text-responsive {
+    font-size: 1.25em; /* Tamaño del texto por defecto */
+}
+
+/* Media queries para dispositivos móviles */
+@media (max-width: 768px) {
+    .heading-responsive {
+        font-size: 2em; /* Tamaño del texto en dispositivos móviles */
+    }
+
+    .text-responsive {
+        font-size: 1em; /* Tamaño del texto en dispositivos móviles */
+    }
+}
+
+@media (max-width: 480px) {
+    .heading-responsive {
+        font-size: 1.5em; /* Tamaño del texto en dispositivos más pequeños */
+    }
+
+    .text-responsive {
+        font-size: 0.875em; /* Tamaño del texto en dispositivos más pequeños */
+    }
+}
 </style>
 
 <div class="row buscar">
@@ -31,12 +60,14 @@ Tienda - Inicio
             <li style="background-image: url({{ url_for('static', filename='images/img_bg_1.jpg') }});">
                 <div class="overlay-gradient"></div>
                 <div class="container">
-                    <div class="col-md-6 col-md-offset-3 col-md-pull-3 js-fullheight slider-text">
-                        <div class="slider-text-inner">
-                            <div class="desc">
-                                <h2>Encimeras Personalizadas</h2>
-                                <p>Transforma tu cocina con nuestras encimeras de solid surface, diseñadas a medida para ti.</p>
-                                <p><a href="{{ url_for('producto_detalle', producto_id=1) }}" class="btn btn-primary btn-outline btn-lg">Ver Más</a></p>
+                    <div class="row">
+                        <div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1 js-fullheight slider-text">
+                            <div class="slider-text-inner">
+                                <div class="desc">
+                                    <h2 class="heading-responsive">Encimeras Personalizadas</h2>
+                                    <p class="text-responsive">Transforma tu cocina con nuestras encimeras de solid surface, diseñadas a medida para ti.</p>
+                                    <p><a href="{{ url_for('customize_countertop') }}" class="btn btn-primary btn-outline btn-lg">Crear Ahora</a></p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -44,12 +75,14 @@ Tienda - Inicio
             </li>
             <li style="background-image: url({{ url_for('static', filename='images/img_bg_2.jpg') }});">
                 <div class="container">
-                    <div class="col-md-6 col-md-offset-3 col-md-pull-3 js-fullheight slider-text">
-                        <div class="slider-text-inner">
-                            <div class="desc">
-                                <h2>Lavabos Modernos</h2>
-                                <p>Añade un toque de elegancia a tu baño con nuestros lavabos de solid surface.</p>
-                                <p><a href="{{ url_for('producto_detalle', producto_id=2) }}" class="btn btn-primary btn-outline btn-lg">Ver Más</a></p>
+                    <div class="row">
+                        <div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1 js-fullheight slider-text">
+                            <div class="slider-text-inner">
+                                <div class="desc">
+                                    <h2 class="heading-responsive">Lavabos Modernos</h2>
+                                    <p class="text-responsive">Añade un toque de elegancia a tu baño con nuestros lavabos de solid surface.</p>
+                                    <p><a href="{{ url_for('index') }}" class="btn btn-primary btn-outline btn-lg">Ver Más</a></p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -57,12 +90,14 @@ Tienda - Inicio
             </li>
             <li style="background-image: url({{ url_for('static', filename='images/img_bg_3.jpg') }});">
                 <div class="container">
-                    <div class="col-md-6 col-md-offset-3 col-md-pull-3 js-fullheight slider-text">
-                        <div class="slider-text-inner">
-                            <div class="desc">
-                                <h2>Revestimientos Innovadores</h2>
-                                <p>Renueva tus espacios con nuestros revestimientos duraderos y elegantes.</p>
-                                <p><a href="{{ url_for('producto_detalle', producto_id=3) }}" class="btn btn-primary btn-outline btn-lg">Ver Más</a></p>
+                    <div class="row">
+                        <div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1 js-fullheight slider-text">
+                            <div class="slider-text-inner">
+                                <div class="desc">
+                                    <h2 class="heading-responsive">Revestimientos Innovadores</h2>
+                                    <p class="text-responsive">Renueva tus espacios con nuestros revestimientos duraderos y elegantes.</p>
+                                    <p><a href="{{ url_for('index') }}" class="btn btn-primary btn-outline btn-lg">Ver Más</a></p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -70,12 +105,14 @@ Tienda - Inicio
             </li>
             <li style="background-image: url({{ url_for('static', filename='images/img_bg_4.jpg') }});">
                 <div class="container">
-                    <div class="col-md-6 col-md-offset-3 col-md-pull-3 js-fullheight slider-text">
-                        <div class="slider-text-inner">
-                            <div class="desc">
-                                <h2>Mesas Únicas</h2>
-                                <p>Descubre nuestras mesas de solid surface, perfectas para cualquier ambiente.</p>
-                                <p><a href="{{ url_for('producto_detalle', producto_id=4) }}" class="btn btn-primary btn-outline btn-lg">Ver Más</a></p>
+                    <div class="row">
+                        <div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1 js-fullheight slider-text">
+                            <div class="slider-text-inner">
+                                <div class="desc">
+                                    <h2 class="heading-responsive">Mesas Únicas</h2>
+                                    <p class="text-responsive">Descubre nuestras mesas de solid surface, perfectas para cualquier ambiente.</p>
+                                    <p><a href="{{ url_for('index') }}" class="btn btn-primary btn-outline btn-lg">Ver Más</a></p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -175,7 +212,7 @@ Tienda - Inicio
                                 <figure>
                                     <img src="{{ url_for('static', filename='images/person1.jpg') }}" alt="usuario">
                                 </figure>
-                                <span>Juan Pérez, vía <a href="#" class="twitter">Twitter</a></span>
+                                <span>Juan</span>
                                 <blockquote>
                                     <p>&ldquo;El servicio fue excelente y la calidad del producto superó mis expectativas.&rdquo;</p>
                                 </blockquote>
@@ -184,9 +221,9 @@ Tienda - Inicio
                         <div class="item">
                             <div class="testimony-slide active text-center">
                                 <figure>
-                                    <img src="{{ url_for('static', filename='images/person2.jpg') }}" alt="usuario">
+                                    <img src="{{ url_for('static', filename='images/person1.jpg') }}" alt="usuario">
                                 </figure>
-                                <span>María López, vía <a href="#" class="twitter">Twitter</a></span>
+                                <span>María</span>
                                 <blockquote>
                                     <p>&ldquo;Muy satisfecho con la compra. El diseño y la funcionalidad son perfectos.&rdquo;</p>
                                 </blockquote>
@@ -195,9 +232,9 @@ Tienda - Inicio
                         <div class="item">
                             <div class="testimony-slide active text-center">
                                 <figure>
-                                    <img src="{{ url_for('static', filename='images/person3.jpg') }}" alt="usuario">
+                                    <img src="{{ url_for('static', filename='images/person1.jpg') }}" alt="usuario">
                                 </figure>
-                                <span>Pedro García, vía <a href="#" class="twitter">Twitter</a></span>
+                                <span>Carmen</span>
                                 <blockquote>
                                     <p>&ldquo;Recomiendo altamente esta empresa. Gran atención al detalle y servicio al cliente.&rdquo;</p>
                                 </blockquote>

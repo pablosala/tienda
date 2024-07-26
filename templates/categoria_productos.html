@@ -1,31 +1,21 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+    /* Style for the brown line */
+    .header-line {
+        border-top: 2px solid #d1c286; /* Brown line */
+        margin-top: 20px;
+    }
+    .espacio{
+        margin-top: 25px;
+    }
+</style>
 <div class="fh5co-loader"></div>
-
-<div id="page">
-    <header id="fh5co-header" class="fh5co-cover fh5co-cover-sm" role="banner" style="background-image:url({{ url_for('static', filename='images/prod.jpg') }});">
-        <div class="overlay"></div>
         <div class="container">
-            <div class="row">
-                <div class="col-md-8 col-md-offset-2 text-center">
-                    <div class="display-t">
-                        <div class="display-tc animate-box" data-animate-effect="fadeIn">
-                            <h1>Product</h1>
-                            <h2>Free html5 templates by <a href="https://themewagon.com/theme_tag/free/" target="_blank">Themewagon</a></h2>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <div id="fh5co-product">
-        <div class="container">
-            <div class="row animate-box">
-                <div class="col-md-8 col-md-offset-2 text-center fh5co-heading">
-                    <span>Cool Stuff</span>
-                    <h2>{{ categoria.nombre }} Products</h2>
+            <div class="row animate-box header-line">
+                <div class="col-md-8 col-md-offset-2 text-center fh5co-heading espacio">
+                    <h2>{{ categoria.nombre }}</h2>
                     <p>Dignissimos asperiores vitae velit veniam totam fuga molestias accusamus alias autem provident. Odit ab aliquam dolor eius.</p>
                 </div>
             </div>
@@ -50,14 +40,13 @@
                 {% endfor %}
             </div>
         </div>
-    </div>
 
     <div id="fh5co-started">
         <div class="container">
             <div class="row animate-box">
                 <div class="col-md-8 col-md-offset-2 text-center fh5co-heading">
-                    <h2>Newsletter</h2>
-                    <p>Just stay tune for our latest Product. Now you can subscribe</p>
+                    <h2>Boletín Informativo</h2>
+                    <p>Mantente al día con nuestros últimos productos. ¡Suscríbete ahora!</p>
                 </div>
             </div>
             <div class="row animate-box">
@@ -65,12 +54,12 @@
                     <form class="form-inline">
                         <div class="col-md-6 col-sm-6">
                             <div class="form-group">
-                                <label for="email" class="sr-only">Email</label>
-                                <input type="email" class="form-control" id="email" placeholder="Email">
+                                <label for="email" class="sr-only">Correo Electrónico</label>
+                                <input type="email" class="form-control" id="email" placeholder="Correo Electrónico">
                             </div>
                         </div>
                         <div class="col-md-6 col-sm-6">
-                            <button type="submit" class="btn btn-default btn-block">Subscribe</button>
+                            <button type="submit" class="btn btn-default btn-block">Suscribirse</button>
                         </div>
                     </form>
                 </div>

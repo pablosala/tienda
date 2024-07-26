@@ -17,11 +17,17 @@ from itsdangerous import URLSafeTimedSerializer
 import requests
 import math
 import json
-
+import base64
+from Crypto.Cipher import DES3
+import hmac
+import hashlib
 # Configurar la zona horaria de Madrid
 madrid_tz = pytz.timezone('Europe/Madrid')
 
+
 app = Flask(__name__)
+app.config.from_object('config.Config')
+
 
 
 
@@ -51,8 +57,10 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 
-# Definir modelos
+
 class Usuario(UserMixin, db.Model):
+    __tablename__ = 'usuario'
+    
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -63,7 +71,7 @@ class Usuario(UserMixin, db.Model):
     direcciones = db.relationship('Direccion', backref='usuario', lazy=True)
     metodos_pago = db.relationship('MetodoPago', backref='usuario', lazy=True)
     carrito = db.relationship('Carrito', backref='usuario', uselist=False)
-
+    valoraciones = db.relationship('Valoracion', backref='autor', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -71,7 +79,10 @@ class Usuario(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+
 class TempUsuario(db.Model):
+    __tablename__ = 'temp_usuario'
+    
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -85,12 +96,16 @@ class TempUsuario(db.Model):
 
 
 class Categoria(db.Model):
+    __tablename__ = 'categoria'
+    
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(150), nullable=False, unique=True)
     productos = db.relationship('Producto', backref='categoria', lazy=True)
 
 
 class Producto(db.Model):
+    __tablename__ = 'producto'
+    
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
     descripcion = db.Column(db.Text, nullable=False)
@@ -98,29 +113,36 @@ class Producto(db.Model):
     stock = db.Column(db.Integer, nullable=False)
     categoria_id = db.Column(db.Integer, db.ForeignKey('categoria.id'), nullable=False)
     ordenes = db.relationship('OrdenProducto', backref='producto', lazy=True)
-    imagenes = db.relationship('Imagen', backref='producto', lazy=True)
+    imagenes = db.relationship('Imagen', backref='producto', lazy=True, cascade="all, delete-orphan")
+    valoraciones = db.relationship('Valoracion', backref='producto_valoraciones', lazy=True)
 
 
 class Imagen(db.Model):
+    __tablename__ = 'imagen'
+    
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(255), nullable=False)
     producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
 
 
 class Orden(db.Model):
+    __tablename__ = 'orden'
+    
     id = db.Column(db.Integer, primary_key=True)
-    fecha = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(madrid_tz))
-    fecha_actualizacion = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(madrid_tz), onupdate=lambda: datetime.now(madrid_tz))
+    fecha = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    fecha_actualizacion = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     direccion_envio_id = db.Column(db.Integer, db.ForeignKey('direccion.id'), nullable=False)
     metodo_pago_id = db.Column(db.Integer, db.ForeignKey('metodo_pago.id'), nullable=False)
     total = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='Pending')
     notas = db.Column(db.Text, nullable=True)
-    productos = db.relationship('OrdenProducto', backref='orden', lazy=True)
+    productos = db.relationship('OrdenProducto', backref='orden', lazy=True, cascade="all, delete-orphan")
 
 
 class OrdenProducto(db.Model):
+    __tablename__ = 'orden_producto'
+    
     orden_id = db.Column(db.Integer, db.ForeignKey('orden.id'), primary_key=True)
     producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), primary_key=True)
     cantidad = db.Column(db.Integer, nullable=False)
@@ -128,12 +150,16 @@ class OrdenProducto(db.Model):
 
 
 class Carrito(db.Model):
+    __tablename__ = 'carrito'
+    
     id = db.Column(db.Integer, primary_key=True)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     items = db.relationship('CarritoItem', backref='carrito', lazy=True)
 
 
 class CarritoItem(db.Model):
+    __tablename__ = 'carrito_item'
+    
     id = db.Column(db.Integer, primary_key=True)
     carrito_id = db.Column(db.Integer, db.ForeignKey('carrito.id'), nullable=False)
     producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
@@ -142,6 +168,8 @@ class CarritoItem(db.Model):
 
 
 class Direccion(db.Model):
+    __tablename__ = 'direccion'
+    
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(120), nullable=False)
     direccion = db.Column(db.String(200), nullable=False)
@@ -154,12 +182,28 @@ class Direccion(db.Model):
 
 
 class MetodoPago(db.Model):
+    __tablename__ = 'metodo_pago'
+    
     id = db.Column(db.Integer, primary_key=True)
     tipo = db.Column(db.String(50), nullable=False)
     numero = db.Column(db.String(20), nullable=False)
     expiracion = db.Column(db.String(7), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     ordenes = db.relationship('Orden', backref='metodo_pago', lazy=True)
+
+
+class Valoracion(db.Model):
+    __tablename__ = 'valoracion'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    puntuacion = db.Column(db.Integer, nullable=False)
+    comentario = db.Column(db.Text, nullable=True)
+    fecha = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    usuario = db.relationship('Usuario', backref='valoraciones_usuario', lazy=True)
+    producto = db.relationship('Producto', backref='valoraciones_producto', lazy=True)
 
 
 
@@ -383,6 +427,18 @@ def eliminar_metodo_pago(metodo_id):
     return redirect(url_for('detalles_cuenta'))
 
 
+def encrypt_3DES(message, key):
+    key = base64.b64decode(key)
+    des3 = DES3.new(key, DES3.MODE_CBC, b'\0\0\0\0\0\0\0\0')
+    padded_message = message + (8 - len(message) % 8) * '\0'
+    encrypted_message = des3.encrypt(padded_message.encode('utf-8'))
+    return base64.b64encode(encrypted_message).decode('utf-8')
+
+def calculate_hmac(key, data):
+    key = base64.b64decode(key)
+    data = data.encode('utf-8')
+    return base64.b64encode(hmac.new(key, data, hashlib.sha256).digest()).decode('utf-8')
+
 @app.route('/checkout', methods=['GET', 'POST'])
 @login_required
 def checkout():
@@ -394,9 +450,11 @@ def checkout():
         return redirect(url_for('index'))
 
     if request.method == 'POST':
-        if 'direccion_envio' in request.form:
-            direccion_envio_id = request.form['direccion_envio']
-        else:
+        direccion_envio_id = request.form.get('direccion_envio')
+        metodo_pago_id = request.form.get('metodo_pago')
+
+        # Validar y manejar nueva dirección
+        if direccion_envio_id == 'nueva':
             nueva_direccion = Direccion(
                 nombre=request.form['nombre_direccion'],
                 direccion=request.form['direccion'],
@@ -409,10 +467,12 @@ def checkout():
             db.session.add(nueva_direccion)
             db.session.flush()
             direccion_envio_id = nueva_direccion.id
+        elif not direccion_envio_id:
+            flash('Por favor seleccione o añada una dirección de envío.', 'danger')
+            return redirect(url_for('checkout'))
 
-        if 'metodo_pago' in request.form:
-            metodo_pago_id = request.form['metodo_pago']
-        else:
+        # Validar y manejar nuevo método de pago
+        if metodo_pago_id == 'nuevo':
             nuevo_metodo_pago = MetodoPago(
                 tipo=request.form['tipo_pago'],
                 numero=request.form['numero_pago'],
@@ -422,6 +482,9 @@ def checkout():
             db.session.add(nuevo_metodo_pago)
             db.session.flush()
             metodo_pago_id = nuevo_metodo_pago.id
+        elif not metodo_pago_id:
+            flash('Por favor seleccione o añada un método de pago.', 'danger')
+            return redirect(url_for('checkout'))
 
         # Crear un nuevo pedido
         pedido = Orden(
@@ -446,14 +509,42 @@ def checkout():
             db.session.delete(item)  # Eliminar los items del carrito
         db.session.commit()
 
-        flash('Tu pedido ha sido realizado con éxito', 'success')
-        return redirect(url_for('index'))
+        # Redirigir a la pasarela de pago de Redsys
+        amount = pedido.total
+        order_id = f'{pedido.id:06d}'  # Asegúrate de que el ID del pedido tiene 6 dígitos
+
+        # Preparar los datos para la petición al TPV
+        merchant_parameters = {
+            'DS_MERCHANT_AMOUNT': str(int(float(amount) * 100)),
+            'DS_MERCHANT_ORDER': order_id,
+            'DS_MERCHANT_MERCHANTCODE': app.config['TPV_MERCHANT_CODE'],
+            'DS_MERCHANT_CURRENCY': app.config['TPV_CURRENCY'],
+            'DS_MERCHANT_TRANSACTIONTYPE': app.config['TPV_TRANSACTION_TYPE'],
+            'DS_MERCHANT_TERMINAL': app.config['TPV_TERMINAL'],
+            'DS_MERCHANT_MERCHANTURL': app.config['TPV_CALLBACK_URL'],
+            'DS_MERCHANT_URLOK': url_for('callback', _external=True),
+            'DS_MERCHANT_URLKO': url_for('callback', _external=True)
+        }
+
+        # Debug: Imprimir merchant_parameters
+        print("Merchant Parameters:", merchant_parameters)
+
+        merchant_parameters_base64 = base64.b64encode(json.dumps(merchant_parameters).encode('utf-8')).decode('utf-8')
+        key = encrypt_3DES(order_id, app.config['TPV_SECRET_KEY'])
+        signature = calculate_hmac(key, merchant_parameters_base64)
+
+        return render_template('tpv_form.html', merchant_parameters=merchant_parameters_base64, signature=signature)
 
     direcciones = Direccion.query.filter_by(usuario_id=usuario_id).all()
     metodos_pago = MetodoPago.query.filter_by(usuario_id=usuario_id).all()
     carrito_items = CarritoItem.query.filter_by(carrito_id=carrito.id).all()
     return render_template('checkout.html', title='Finalizar Compra', carrito_items=carrito_items, direcciones=direcciones, metodos_pago=metodos_pago, user=current_user)
 
+@app.route('/callback', methods=['POST'])
+def callback():
+    data = request.form
+    # Manejar la respuesta del TPV (ej. confirmar el pago, actualizar el estado del pedido, etc.)
+    return '', 200
 def calcular_total_carrito(carrito_id):
     carrito_items = CarritoItem.query.filter_by(carrito_id=carrito_id).all()
     total = sum(item.cantidad * item.producto.precio for item in carrito_items)
@@ -495,10 +586,37 @@ def category_products(category_id):
     return render_template('category_products.html', categoria=categoria, productos=productos)
 
 
-@app.route('/producto/<int:producto_id>')
+@app.route('/producto/<int:producto_id>', methods=['GET', 'POST'])
+@login_required
 def producto_detalle(producto_id):
     producto = Producto.query.get_or_404(producto_id)
-    return render_template('single.html', producto=producto)
+    ha_comprado = Orden.query.filter_by(usuario_id=current_user.id).join(OrdenProducto).filter_by(producto_id=producto_id).all()
+
+    if request.method == 'POST':
+        puntuacion = int(request.form['puntuacion'])
+        comentario = request.form['comentario']
+
+        if not (1 <= puntuacion <= 5):
+            flash('La puntuación debe estar entre 1 y 5 estrellas.', 'danger')
+            return redirect(url_for('producto_detalle', producto_id=producto_id))
+
+        if not ha_comprado:
+            flash('Solo puedes valorar productos que hayas comprado.', 'danger')
+            return redirect(url_for('producto_detalle', producto_id=producto_id))
+
+        valoracion = Valoracion(producto_id=producto_id,
+                                usuario_id=current_user.id,
+                                puntuacion=puntuacion,
+                                comentario=comentario)
+
+        db.session.add(valoracion)
+        db.session.commit()
+
+        flash('Gracias por tu valoración!', 'success')
+        return redirect(url_for('producto_detalle', producto_id=producto_id))
+
+    return render_template('single.html', producto=producto, ha_comprado=ha_comprado)
+
 
 @app.route('/agregar_carrito/<int:producto_id>', methods=['POST'])
 @login_required
@@ -576,6 +694,51 @@ def pedido_detalle(pedido_id):
         return redirect(url_for('index'))
     return render_template('pedido_detalle.html', pedido=pedido)
 
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
+
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+@app.route('/producto/<int:producto_id>/valorar', methods=['GET', 'POST'])
+@login_required
+def valorar_producto(producto_id):
+    producto = Producto.query.get_or_404(producto_id)
+    
+    if request.method == 'POST':
+        puntuacion = int(request.form['puntuacion'])
+        comentario = request.form['comentario']
+        
+        if not (1 <= puntuacion <= 5):
+            flash('La puntuación debe estar entre 1 y 5 estrellas.', 'danger')
+            return redirect(url_for('valorar_producto', producto_id=producto_id))
+        
+        # Verificar si el usuario ha comprado este producto
+        ordenes = Orden.query.filter_by(usuario_id=current_user.id)\
+                             .join(OrdenProducto)\
+                             .filter_by(producto_id=producto_id)\
+                             .all()
+        
+        if not ordenes:
+            flash('Solo puedes valorar productos que hayas comprado.', 'danger')
+            return redirect(url_for('producto_detalle', producto_id=producto_id))
+        
+        valoracion = Valoracion(producto_id=producto_id,
+                                usuario_id=current_user.id,
+                                puntuacion=puntuacion,
+                                comentario=comentario)
+        
+        db.session.add(valoracion)
+        db.session.commit()
+        
+        flash('Gracias por tu valoración!', 'success')
+        return redirect(url_for('producto_detalle', producto_id=producto_id))
+    
+    return render_template('valorar_producto.html', producto=producto)
+
+
 
 
 
@@ -652,7 +815,9 @@ def agregar_producto():
 def editar_producto(producto_id):
     if current_user.role != 'admin':
         return redirect(url_for('index'))
+    
     producto = Producto.query.get_or_404(producto_id)
+
     if request.method == 'POST':
         producto.nombre = request.form['nombre']
         producto.descripcion = request.form['descripcion']
@@ -673,8 +838,34 @@ def editar_producto(producto_id):
         
         flash('Producto editado con éxito', 'success')
         return redirect(url_for('admin'))
+    
     categorias = Categoria.query.all()
     return render_template('editar_producto.html', producto=producto, categorias=categorias)
+
+@app.route('/admin/eliminar_imagen/<int:imagen_id>', methods=['POST'])
+@login_required
+def eliminar_imagen(imagen_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+    
+    imagen = Imagen.query.get_or_404(imagen_id)
+    producto_id = request.form['producto_id']
+    
+    try:
+        # Eliminar archivo de imagen del sistema de archivos si es necesario
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], imagen.url)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        # Eliminar registro de la base de datos
+        db.session.delete(imagen)
+        db.session.commit()
+        flash('Imagen eliminada correctamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar la imagen: {str(e)}', 'danger')
+    
+    return redirect(url_for('editar_producto', producto_id=producto_id))
 
 
 
@@ -985,6 +1176,28 @@ def await_confirmation(email):
 
 
 
+@app.route('/customize_countertop', methods=['GET', 'POST'])
+def customize_countertop():
+    if request.method == 'POST':
+        # Obtener los datos del formulario
+        length = request.form['length']
+        width = request.form['width']
+        sink = request.form['sink']
+        color = request.form['color']
+        edge = request.form['edge']
+        backsplash = request.form['backsplash']
+
+        # Aquí puedes agregar la lógica para procesar los datos,
+        # como guardarlos en una base de datos o realizar cálculos.
+
+        flash('Encimera personalizada creada con éxito!', 'success')
+        return redirect(url_for('index'))
+
+    return render_template('customize_countertop.html')
+
+
+
+
 
 
 
@@ -1036,32 +1249,9 @@ def fijar_precios():
     # En caso contrario, si la solicitud no es JSON, puedes devolver una respuesta de error
     return jsonify({'error': 'Solicitud no válida'}), 400
 
+
 @app.route('/calcular', methods=['POST'])
 def calcular():
-    # Obtén los valores de origen y destino del formulario
-    origen = request.form['origen']
-    destino = request.form['destino']
-
-    # Obtiene las coordenadas de origen y destino
-    origen_coords = obtener_coordenadas(origen)
-    destino_coords = obtener_coordenadas(destino)
-
-    if origen_coords is None or destino_coords is None:
-        return "No se pudieron obtener las coordenadas de origen y destino."
-
-    # Calcula la distancia y el tiempo de viaje utilizando OpenRouteService
-    distancia_km, tiempo_viaje_minutos = calcular_distancia_openrouteservice(origen_coords, destino_coords)
-
-    if distancia_km is None or tiempo_viaje_minutos is None:
-        return "No se pudieron obtener la distancia y el tiempo de viaje."
-
-    cantidad_combustible = (distancia_km / 100) * 12
-
-    # Calcula el costo de desplazamiento utilizando el precio promedio de la gasolina (fuente pública)
-    costo_gasolina = obtener_precio_gasolina()  # Puedes implementar esta función
-
-    costo_desplazamiento = cantidad_combustible * costo_gasolina
-
     #################### CARGA DE PRECIOS DESDE config.json ##########################
     with open('config.json', 'r') as config_file:
         precios_config = json.load(config_file)
@@ -1081,8 +1271,10 @@ def calcular():
     solid_largo_list = [float(x) if x else 0.0 for x in request.form.getlist('solid_largo[]')]
 
     # Sumar todas las áreas de "Solid"
-    area_solid = sum([ancho * largo for ancho, largo in zip(solid_ancho_list, solid_largo_list)]) * solid_costo_unitario
-    total_m2 = sum([ancho * largo for ancho, largo in zip(solid_ancho_list, solid_largo_list)])
+    total_m2_decimal = sum([ancho * largo for ancho, largo in zip(solid_ancho_list, solid_largo_list)])
+    total_m2 = math.ceil(total_m2_decimal)#Redondeado al alza
+    area_solid = total_m2 * solid_costo_unitario
+
 
     # Obtener los valores de los otros atributos comunes
     pegamento = float(request.form['pegamento']) if 'pegamento' in request.form and request.form['pegamento'] else 0.0
@@ -1095,81 +1287,74 @@ def calcular():
     colocacion = float(request.form['colocacion']) if 'colocacion' in request.form and request.form['colocacion'] else 0.0
     desplazamiento = float(request.form['desplazamiento']) if 'desplazamiento' in request.form and request.form['desplazamiento'] else 0.0
 
-    # Inicializa la variable mano_obra_solid con un valor predeterminado de 0.0
+    # Inicializa las variables con valores predeterminados de 0.0
     mano_obra_solid = 0.0
+    mano_obra_acero = 0.0
 
-    # Verifica si se proporciona el valor en el formulario y, si es así, asigna el valor correspondiente
+    # Verifica si se proporcionan los valores en el formulario y asigna los valores correspondientes
     if 'mano_obra_solid' in request.form and request.form['mano_obra_solid']:
         mano_obra_solid = float(request.form['mano_obra_solid'])
 
-    # Inicializa la variable mano_obra_acero con un valor predeterminado de 0.0
-    mano_obra_acero = 0.0
-
-    # Verifica si se proporciona el valor en el formulario y, si es así, asigna el valor correspondiente
     if 'mano_obra_acero' in request.form and request.form['mano_obra_acero']:
         mano_obra_acero = float(request.form['mano_obra_acero'])
 
+    # Obtener listas de ancho y largo para calcular lijas
+    solid_ancho_list = request.form.getlist('solid_ancho[]')
+    solid_largo_list = request.form.getlist('solid_largo[]')
 
+    solid_ancho_list = [float(ancho) for ancho in solid_ancho_list if ancho]
+    solid_largo_list = [float(largo) for largo in solid_largo_list if largo]
+
+    # Calcula el costo de las lijas
     lijas = sum([ancho * largo for ancho, largo in zip(solid_ancho_list, solid_largo_list)]) * precio_lija
 
     # Agrega el campo "Costado" solo si es "Isla"
     costado = float(request.form['costado']) if tipo_presupuesto == 'isla' and 'costado' in request.form and request.form['costado'] else 0.0
 
-    tipo_fregadero = request.form.get('tipo_fregadero')
+    tipo_fregadero = request.form.get('tipo_fregadero_solid')
+    tipo = request.form.get('tipo')
+    precio_solid_fregadero = 0.0
+    precio_solid_lavabo = 0.0
+    mecanizado_solid = 0.0
+    copete = request.form.get('copete')
+    fabricable = request.form.get('fabricable', '')
+    entrepano = request.form.get('entrepaño')
 
-    
-    if tipo_fregadero == 'solid':
-        precio_solid = request.form['precio_solid']
-        mecanizado_solid_str = request.form.get('mecanizado_solid', '')
-        mano_obra_solid_str = request.form.get('mano_obra_solid', '')
-        
-        mecanizado_solid = float(mecanizado_solid_str) if mecanizado_solid_str else 0.0
-        mano_obra_solid = float(mano_obra_solid_str) if mano_obra_solid_str else 0.0
+
+    if tipo_fregadero == 'Fregadero':
+        precio_solid_fregadero = float(request.form['precio_solid_fregadero']) if 'precio_solid_fregadero' in request.form and request.form['precio_solid_fregadero'] else 0.0
+        mecanizado_solid = float(request.form.get('mecanizado_solid', 0.0))
+        mano_obra_solid = float(request.form.get('mano_obra_solid_fregadero', 0.0))
+    elif tipo_fregadero == 'Lavabo':
+        precio_solid_lavabo = float(request.form['precio_solid_lavabo']) if 'precio_solid_lavabo' in request.form and request.form['precio_solid_lavabo'] else 0.0
+        mecanizado_solid = float(request.form.get('mecanizado_solid', 0.0))
+        mano_obra_solid = float(request.form.get('mano_obra_solid_lavabo', 0.0))
     elif tipo_fregadero == 'acero':
-        mano_obra_acero_str = request.form.get('mano_obra_acero', '')
-        mano_obra_acero = float(mano_obra_acero_str) if mano_obra_acero_str else 0.0
-    else:
-        precio_solid = mecanizado_solid = mano_obra_solid = mano_obra_acero = 0.0
+        mano_obra_acero = float(request.form.get('mano_obra_acero', 0.0))
 
     tipo_canto = request.form.get('tipo_canto', 'recto')  # Valor predeterminado si no se selecciona tipo de canto
 
+    precios_canto = {
+        'recto': {
+            'hasta_2_4': 40,
+            '3_a_6': 60,
+            '8_o_mas': 70
+        },
+        'redondo': {
+            'hasta_2_4': 50,
+            '3_a_6': 70,
+            '8_o_mas': 80
+        }
+    }
 
-    precios_canto = {}
-
-    # Verifica si el tipo de canto es "-" y establece el costo en consecuencia
     if tipo_canto == '-':
         costo_canto = 0.0
-        medida_canto = 0.0
+        medida_canto = ''
     else:
-        if tipo_canto == 'recto':
-            medida_canto = request.form.get('medida_canto_recto', 'hasta_2_4')  # Valor predeterminado si no se selecciona medida de canto recto
-        else:
-            medida_canto = request.form.get('medida_canto_redondo', 'hasta_2_4')  # Valor predeterminado si no se selecciona medida de canto redondo
-
-        # Calcula el costo del canto si tipo_canto no es "-"
-        if tipo_canto != '-':
-            precios_canto = {
-                'recto': {
-                    'hasta_2_4': 40,
-                    '3_a_6': 60,
-                    '8_o_mas': 70
-                },
-                'redondo': {
-                    'hasta_2_4': 50,  # 10€ más caro
-                    '3_a_6': 70,  # 10€ más caro
-                    '8_o_mas': 80   # 10€ más caro
-                }
-            }
-        costo_canto = precios_canto[tipo_canto][medida_canto]
-
-
-    # Resto del código para calcular y renderizar
-
+        medida_canto = request.form.get(f'medida_canto_{tipo_canto}', 'hasta_2_4')  # Valor predeterminado si no se selecciona medida de canto
+        costo_canto = precios_canto.get(tipo_canto, {}).get(medida_canto, 0.0)
 
     metros_canto = float(request.form.get('metros_canto', 0.0))
-
-
-    #costo_canto = precios_canto[tipo_canto][medida_canto]
 
     # Calcula el costo del pegamento para cantos
     costo_pegamento_cantos = (metros_canto / 3) * precio_pegamento
@@ -1183,41 +1368,29 @@ def calcular():
 
     costo_p404 = p404 * precio_p404
     cantidad_p404 = p404 * 3
-
+    costo_desplazamiento = 0
 
     # Mecanizado
     costo_mecanizado = mecanizado * precio_mecanizado
     costo_mecanizado_peon = peon * precio_mecanizado_peon
 
-    # Calcula el presupuesto total
     presupuesto_total = calcular_presupuesto(
-    tipo_presupuesto, 
-    area_solid, 
-    costo_pegamento + costo_pegamento_cantos,
-    lijas, 
-    p404, 
-    mecanizado, 
-    peon, 
-    fregadero,  # Campo de fregadero
-    valvula, 
-    colocacion, 
-    costo_desplazamiento, 
-    costado, 
-    tipo_canto, 
-    medida_canto, 
-    metros_canto, 
-    costo_canto, 
-    costo_pegamento_cantos, 
-    costo_lijas_cantos, 
-    tipo_fregadero,  # Campo de tipo de fregadero
-    precio_solid, #ERA precio_solid 
-    mecanizado_solid, 
-    mano_obra_solid, 
-    mano_obra_acero)
+        tipo_presupuesto, area_solid, costo_pegamento + costo_pegamento_cantos, lijas, p404, mecanizado, peon, fregadero,
+        valvula, colocacion, costo_desplazamiento, costado, tipo_canto, medida_canto, metros_canto, costo_canto,
+        costo_pegamento_cantos, costo_lijas_cantos, tipo_fregadero, precio_solid_fregadero if tipo_fregadero == 'Fregadero' else precio_solid_lavabo,
+        mecanizado_solid, mano_obra_solid, mano_obra_acero
+    )
 
-    # Renderiza la factura con los resultados
-    return render_template('factura.html', area_solid=area_solid, total_m2=total_m2, pegamento=pegamento,precio_pegamento=precio_pegamento,costo_pegamento=costo_pegamento,cantidad_pegamento=cantidad_pegamento, lijas=lijas, precio_lija=precio_lija, p404=p404, costo_p404=costo_p404, cantidad_p404=cantidad_p404, precio_p404=precio_p404, mecanizado=mecanizado,precio_mecanizado=precio_mecanizado,costo_mecanizado=costo_mecanizado, peon=peon,precio_mecanizado_peon=precio_mecanizado_peon,costo_mecanizado_peon=costo_mecanizado_peon, fregadero=fregadero, valvula=valvula, colocacion=colocacion, desplazamiento=desplazamiento, presupuesto=presupuesto_total, solid_costo_unitario=solid_costo_unitario, tipo_presupuesto=tipo_presupuesto, costado=costado, distancia_km=distancia_km, costo_desplazamiento=costo_desplazamiento, tiempo_viaje_minutos=tiempo_viaje_minutos, origen=origen, destino=destino, tipo_canto=tipo_canto, medida_canto=medida_canto, metros_canto=metros_canto, costo_canto=costo_canto, costo_pegamento_cantos=costo_pegamento_cantos, costo_lijas_cantos=costo_lijas_cantos,tipo_fregadero=tipo_fregadero,precio_solid=precio_solid, mecanizado_solid=mecanizado_solid, mano_obra_solid=mano_obra_solid, mano_obra_acero=mano_obra_acero)
-
+    return render_template('factura.html', area_solid=area_solid, total_m2=total_m2, pegamento=pegamento, precio_pegamento=precio_pegamento,
+                           costo_pegamento=costo_pegamento, cantidad_pegamento=cantidad_pegamento, lijas=lijas, precio_lija=precio_lija,
+                           p404=p404, costo_p404=costo_p404, cantidad_p404=cantidad_p404, precio_p404=precio_p404, mecanizado=mecanizado,
+                           precio_mecanizado=precio_mecanizado, costo_mecanizado=costo_mecanizado, peon=peon, precio_mecanizado_peon=precio_mecanizado_peon,
+                           costo_mecanizado_peon=costo_mecanizado_peon, fregadero=fregadero, valvula=valvula, colocacion=colocacion, desplazamiento=desplazamiento,
+                           presupuesto=presupuesto_total, solid_costo_unitario=solid_costo_unitario, tipo_presupuesto=tipo_presupuesto,
+                           costado=costado, costo_desplazamiento=costo_desplazamiento, tipo_canto=tipo_canto, medida_canto=medida_canto, metros_canto=metros_canto,
+                           costo_canto=costo_canto, costo_pegamento_cantos=costo_pegamento_cantos, costo_lijas_cantos=costo_lijas_cantos, tipo_fregadero=tipo_fregadero, tipo=request.form.get('tipo'),
+                           precio_solid_fregadero=precio_solid_fregadero, precio_solid_lavabo=precio_solid_lavabo, mecanizado_solid=mecanizado_solid, mano_obra_solid=mano_obra_solid, mano_obra_acero=mano_obra_acero,
+                           copete=copete, fabricable=fabricable, entrepano=entrepano)
 
 # Implementa la lógica de cálculo del presupuesto aquí
 def calcular_presupuesto(
@@ -1278,62 +1451,26 @@ def calcular_presupuesto(
     # Realiza otros cálculos según sea necesario
     # ...
     
+    # Cálculos específicos para fregaderos y lavabos
+    if tipo_fregadero == 'Fregadero':
+        costo_fregadero = precio_solid
+    elif tipo_fregadero == 'Lavabo':
+        costo_fregadero = precio_solid
+    else:
+        costo_fregadero = 0.0
+
+
     if tipo_presupuesto == 'isla':
         otro_calculo = 0
     else:
         otro_calculo = 0
     
-    presupuesto_total =area_solid + costo_pegamento + costo_pegamento_cantos +lijas +p404 + mecanizado + peon + valvula + colocacion + costo_desplazamiento + costado + metros_canto + costo_canto + costo_pegamento_cantos + costo_lijas_cantos + mecanizado_solid + mano_obra_solid + mano_obra_acero
+    # Calcular el presupuesto total
+    presupuesto_total = (area_solid + costo_pegamento + costo_pegamento_cantos + lijas + p404 + mecanizado + peon + valvula +
+                         colocacion + costo_desplazamiento + costado + metros_canto + costo_canto + costo_pegamento_cantos +
+                         costo_lijas_cantos + mecanizado_solid + mano_obra_solid + mano_obra_acero + costo_fregadero)
     
     return presupuesto_total
-
-def obtener_coordenadas(nombre_lugar):
-    # Realiza una solicitud a la API de Nominatim para obtener las coordenadas geográficas
-    url = f'https://nominatim.openstreetmap.org/search?format=json&q={nombre_lugar}'
-    response = requests.get(url)
-    
-    if response.status_code == 200:
-        data = response.json()
-        if data and len(data) > 0:
-            # Obtiene las coordenadas del primer resultado
-            latitud = float(data[0]['lat'])
-            longitud = float(data[0]['lon'])
-            return (latitud, longitud)
-    
-    return None
-
-def calcular_distancia_openrouteservice(origen_coords, destino_coords):
-    api_key = '5b3ce3597851110001cf62485cb4cfbbdb0a43f88be973e00a928439'  # Reemplaza con tu propia clave
-
-    # Crea una solicitud para obtener la distancia y el tiempo de viaje entre las ubicaciones
-    url = f'https://api.openrouteservice.org/v2/matrix/driving-car?api_key={api_key}'
-    data = {
-        "locations": [[origen_coords[1], origen_coords[0]], [destino_coords[1], destino_coords[0]]],  # Invierte latitud y longitud
-        "metrics": ["distance", "duration"],  # Solicita distancia y tiempo de viaje
-        "units": "km"  # Unidades de distancia en kilómetros
-    }
-
-    response = requests.post(url, json=data)
-
-    if response.status_code == 200:
-        result = json.loads(response.text)
-        distancia_km = result['distances'][0][1] # Obtiene la distancia en kilómetros
-        tiempo_viaje_minutos = result['durations'][0][1] / 60.0  # Obtiene el tiempo de viaje en minutos
-        return distancia_km, tiempo_viaje_minutos
-    else:
-        # En caso de error, retorna None o maneja el error de acuerdo a tus necesidades
-        return None, None
-
-def obtener_precio_gasolina():
-    # Intenta obtener el precio de la gasolina desde una fuente externa
-    try:
-        # Lógica para obtener el precio de la gasolina aquí
-        # Si obtienes el precio con éxito, devuelve el valor como un float
-        precio_gasolina = 1.78  # Ejemplo de precio de gasolina en euros por litro
-        return precio_gasolina
-    except Exception as e:
-        # Si no puedes obtener el precio, devuelve un valor predeterminado
-        return 1.78  # Precio predeterminado en caso de error o falta de datos
 
 
 

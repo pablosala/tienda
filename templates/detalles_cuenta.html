@@ -42,7 +42,6 @@ Detalles de la Cuenta
         <!-- Mis Pedidos -->
         <div class="tab-pane fade" id="ordenes" role="tabpanel" aria-labelledby="ordenes-tab">
             <div class="mt-4">
-                <h3>Mis Pedidos</h3>
                 {% for orden in ordenes %}
                     <div class="card mb-3">
                         <div class="card-body">
@@ -59,7 +58,6 @@ Detalles de la Cuenta
         <!-- Direcciones -->
         <div class="tab-pane fade" id="direcciones" role="tabpanel" aria-labelledby="direcciones-tab">
             <div class="mt-4">
-                <h3>Mis Direcciones</h3>
                 <a href="{{ url_for('nueva_direccion') }}" class="btn btn-primary mb-3">Añadir Nueva Dirección</a>
                 {% for direccion in direcciones %}
                     <div class="card mb-3">
@@ -79,7 +77,6 @@ Detalles de la Cuenta
         <!-- Métodos de Pago -->
         <div class="tab-pane fade" id="metodos" role="tabpanel" aria-labelledby="metodos-tab">
             <div class="mt-4">
-                <h3>Mis Métodos de Pago</h3>
                 <a href="{{ url_for('nuevo_metodo_pago') }}" class="btn btn-primary mb-3">Añadir Nuevo Método</a>
                 {% for metodo in metodos_pago %}
                     <div class="card mb-3">

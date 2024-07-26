@@ -55,19 +55,20 @@
             <td>{{ precio_mecanizado_peon }}</td>
             <td>{{ costo_mecanizado_peon }}</td>
         </tr>
-            <tr>
+<tr>
+        <tr>
             <td>Fregadero</td>
             <td>0</td>
             <td>{{ fregadero }}</td>
             <td>{{ fregadero }}</td>
         </tr>
-        
-        {% if tipo_fregadero == 'solid' %}
+
+        {% if tipo_fregadero == 'Fregadero' %}
         <tr>
-            <td>&nbsp;&nbsp;&nbsp;- Modelo Solid</td>
+            <td>&nbsp;&nbsp;&nbsp;- Modelo Solid Fregadero</td>
             <td>0</td>
-            <td>{{ modelo_solid }}</td>
-            <td>{{ modelo_solid }}</td>
+            <td>{{ precio_solid_fregadero }}</td>
+            <td>{{ precio_solid_fregadero }}</td>
         </tr>
         <tr>
             <td>&nbsp;&nbsp;&nbsp;- Mecanizado Solid</td>
@@ -81,7 +82,26 @@
             <td>{{ mano_obra_solid }}</td>
             <td>{{ mano_obra_solid }}</td>
         </tr>
-        {% elif tipo_fregadero == 'acero' %}
+        {% elif tipo_fregadero == 'Lavabo' %}
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;- Modelo Solid Lavabo</td>
+            <td>0</td>
+            <td>{{ precio_solid_lavabo }}</td>
+            <td>{{ precio_solid_lavabo }}</td>
+        </tr>
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;- Mecanizado Solid</td>
+            <td>0</td>
+            <td>{{ mecanizado_solid }}</td>
+            <td>{{ mecanizado_solid }}</td>
+        </tr>
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;- Mano de Obra Solid</td>
+            <td>0</td>
+            <td>{{ mano_obra_solid }}</td>
+            <td>{{ mano_obra_solid }}</td>
+        </tr>
+        {% elif tipo == 'acero' %}
         <tr>
             <td>&nbsp;&nbsp;&nbsp;- Mano de Obra Acero</td>
             <td>0</td>
@@ -89,6 +109,28 @@
             <td>{{ mano_obra_acero }}</td>
         </tr>
         {% endif %}
+
+        <tr>
+            <td>Copete</td>
+            <td>0</td>
+            <td>{{ copete }}</td>
+            <td>{{ copete }}</td>
+        </tr>
+        {% if copete == 'sanitario' %}
+        <tr>
+            <td>&nbsp;&nbsp;&nbsp;- Fabricable</td>
+            <td>0</td>
+            <td>{{ fabricable }}</td>
+            <td>{{ fabricable }}</td>
+        </tr>
+        {% endif %}
+
+        <tr>
+            <td>Entrepaño</td>
+            <td>0</td>
+            <td>{{ entrepano }}</td>
+            <td>{{ entrepano }}</td>
+        </tr>
 
         </tr>
         <tr>

@@ -882,6 +882,17 @@ h1, h2, h3, h4, h5, h6, figure {
   -ms-border-radius: 4px;
   border-radius: 4px;
 }
+.fh5co-tabs .fh5co-tab-nav-2 {
+  clear: both;
+  padding: 3px;
+  float: left;
+  width: 100%;
+  background: #f2f2f2;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  -ms-border-radius: 4px;
+  border-radius: 4px;
+}
 .fh5co-tabs .fh5co-tab-nav li {
   float: left;
   margin: 0;
@@ -914,72 +925,79 @@ h1, h2, h3, h4, h5, h6, figure {
   background: #fff;
   color: #d1c286;
 }
-.fh5co-tabs .fh5co-tab-content-wrap {
-  clear: both;
-  position: relative;
-  top: 70px;
-}
-.fh5co-tabs .fh5co-tab-content-wrap .tab-content {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  opacity: 0;
-  visibility: hidden;
-}
-.fh5co-tabs .fh5co-tab-content-wrap .tab-content.active {
-  opacity: 1;
-  visibility: visible;
-}
-.fh5co-tabs .fh5co-tab-content-wrap .tab-content .price {
-  letter-spacing: 2px;
-  border: 2px solid #d1c286;
-  display: inline-block;
-  margin-bottom: 20px;
-  padding: 7px 20px 10px 20px;
-}
-.fh5co-tabs .fh5co-tab-content-wrap ul {
-  padding: 0;
-  margin: 0;
-  margin-bottom: 3em;
-}
-.fh5co-tabs .fh5co-tab-content-wrap ul li {
-  list-style: none;
-  margin-bottom: 20px;
-  position: relative;
-  padding-left: 30px;
-}
-.fh5co-tabs .fh5co-tab-content-wrap ul li:before {
-  font-family: 'icomoon';
-  position: absolute;
-  top: 0;
-  left: 0;
-  content: '\e116';
-}
-.fh5co-tabs .fh5co-tab-content-wrap .feed {
-  width: 100%;
-  float: left;
-  margin-bottom: 7em;
-}
-.fh5co-tabs .fh5co-tab-content-wrap .feed > div {
-  width: 100%;
-  float: left;
-  margin-bottom: 1em;
-}
-.fh5co-tabs .fh5co-tab-content-wrap .feed > div blockquote {
-  border-left: 0;
-  padding: 20px;
-  background: rgba(0, 0, 0, 0.04);
-}
-.fh5co-tabs .fh5co-tab-content-wrap .feed > div h3 {
-  font-family: "Playfair Display", serif;
-  font-size: 18px;
-  display: inline-block;
-  padding-right: 20px;
-}
-.fh5co-tabs .fh5co-tab-content-wrap .feed > div .rate {
-  color: #ffba00;
-}
+ .fh5co-tabs .fh5co-tab-content-wrap {
+        clear: both;
+        position: relative;
+        top: 70px;
+    }
+    .fh5co-tabs .fh5co-tab-content-wrap .tab-content {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        opacity: 0;
+        visibility: hidden;
+        z-index: -1;
+        transition: opacity 0.3s ease-in-out, visibility 0s 0.3s, z-index 0s 0.3s;
+        height: 0; /* Inicialmente altura cero */
+    }
+    .fh5co-tabs .fh5co-tab-content-wrap .tab-content.active {
+        position: relative;
+        opacity: 1;
+        visibility: visible;
+        z-index: 1;
+        transition: opacity 0.3s ease-in-out, visibility 0s, z-index 0s;
+        height: auto; /* Ajustar altura automáticamente */
+    }
+    .fh5co-tabs .fh5co-tab-content-wrap .tab-content .price {
+        letter-spacing: 2px;
+        border: 2px solid #d1c286;
+        display: inline-block;
+        margin-bottom: 20px;
+        padding: 7px 20px 10px 20px;
+    }
+    .fh5co-tabs .fh5co-tab-content-wrap ul {
+        padding: 0;
+        margin: 0;
+        margin-bottom: 3em;
+    }
+    .fh5co-tabs .fh5co-tab-content-wrap ul li {
+        list-style: none;
+        margin-bottom: 20px;
+        position: relative;
+        padding-left: 30px;
+    }
+    .fh5co-tabs .fh5co-tab-content-wrap ul li:before {
+        font-family: 'icomoon';
+        position: absolute;
+        top: 0;
+        left: 0;
+        content: '\e116';
+    }
+    .fh5co-tabs .fh5co-tab-content-wrap .feed {
+        width: 100%;
+        float: left;
+        margin-bottom: 7em;
+    }
+    .fh5co-tabs .fh5co-tab-content-wrap .feed > div {
+        width: 100%;
+        float: left;
+        margin-bottom: 1em;
+    }
+    .fh5co-tabs .fh5co-tab-content-wrap .feed > div blockquote {
+        border-left: 0;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.04);
+    }
+    .fh5co-tabs .fh5co-tab-content-wrap .feed > div h3 {
+        font-family: "Playfair Display", serif;
+        font-size: 18px;
+        display: inline-block;
+        padding-right: 20px;
+    }
+    .fh5co-tabs .fh5co-tab-content-wrap .feed > div .rate {
+        color: #ffba00;
+    }
 .fh5co-tabs .icon-xlg {
   font-size: 400px;
   margin-bottom: 30px;

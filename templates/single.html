@@ -1,141 +1,199 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<header id="fh5co-header" class="fh5co-cover fh5co-cover-sm" role="banner" style="background-image:url({{ url_for('static', filename='images/img_bg_2.jpg') }});">
-    <div class="overlay"></div>
-    <div class="container">
-        <div class="row">
-            <div class="col-md-8 col-md-offset-2 text-center">
-                <div class="display-t">
-                    <div class="display-tc animate-box" data-animate-effect="fadeIn">
-                        <h1>{{ producto.nombre }}</h1>
-                        <h2>Detalles del Producto</h2>
+<style>
+    .header-line {
+        border-top: 2px solid #d1c286; /* Brown line */
+        margin-top: 20px;
+    }
+    .espacio {
+        margin-top: 25px;
+    }
+    .espacio2 {
+        margin-top: 100px;
+    }
+    .star-rating .fa {
+        font-size: 18px;
+        color: #ffd700;
+    }
+    .tab-content-resizable {
+        transition: height 0.3s ease-in-out;
+        overflow: hidden;
+    }
+    .hidden-tab {
+        display: none;
+    }
+</style>
+<div class="container">
+    <div class="row header-line">
+        <div class="col-md-10 col-md-offset-1 animate-box espacio">
+            {% if producto.imagenes|length > 1 %}
+            <div id="productCarousel" class="carousel slide" data-ride="carousel">
+                <div class="carousel-inner">
+                    {% for imagen in producto.imagenes %}
+                    <div class="carousel-item {% if loop.first %}active{% endif %}">
+                        <img src="{{ url_for('static', filename='uploads/' ~ imagen.url) }}" alt="{{ producto.nombre }}" class="d-block w-100" style="height: auto; max-height: 500px; margin: 0 auto;">
                     </div>
+                    {% endfor %}
+                </div>
+                <a class="carousel-control-prev" href="#productCarousel" role="button" data-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="sr-only">Previous</span>
+                </a>
+                <a class="carousel-control-next" href="#productCarousel" role="button" data-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="sr-only">Next</span>
+                </a>
+            </div>
+            {% else %}
+            <div class="text-center">
+                <figure>
+                    <img src="{{ url_for('static', filename='uploads/' ~ producto.imagenes[0].url) }}" alt="{{ producto.nombre }}" class="img-responsive" style="max-width: 100%; height: auto;">
+                </figure>
+            </div>
+            {% endif %}
+            <div class="row animate-box">
+                <div class="col-md-8 col-md-offset-2 text-center fh5co-heading">
+                    <h2>{{ producto.nombre }}</h2>
+                    <span class="price">{{ producto.precio }} €</span>
+                    <p>
+                        <form action="{{ url_for('agregar_carrito', producto_id=producto.id) }}" method="POST">
+                            <div class="form-group">
+                                <label for="cantidad">Cantidad:</label>
+                                <input type="number" name="cantidad" id="cantidad" class="form-control" value="1" min="1" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-outline btn-lg">Agregar al Carrito</button>
+                        </form>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
-</header>
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+            <div class="fh5co-tabs animate-box">
+                <ul class="fh5co-tab-nav tab-buttons">
+                    <li class="active"><a href="#" class="tab-button" data-tab="1"><span class="icon visible-xs"><i class="icon-file"></i></span><span class="hidden-xs">Detalles del Producto</span></a></li>
+                    <li><a href="#" class="tab-button" data-tab="2"><span class="icon visible-xs"><i class="icon-bar-graph"></i></span><span class="hidden-xs">Especificaciones</span></a></li>
+                    <li><a href="#" class="tab-button" data-tab="3"><span class="icon visible-xs"><i class="icon-star"></i></span><span class="hidden-xs">Comentarios y Calificaciones</span></a></li>
+                </ul>
 
-<div id="fh5co-product">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-10 col-md-offset-1 animate-box">
-                {% if producto.imagenes|length > 1 %}
-                <div id="productCarousel" class="carousel slide" data-ride="carousel">
-                    <div class="carousel-inner">
-                        {% for imagen in producto.imagenes %}
-                        <div class="carousel-item {% if loop.first %}active{% endif %}">
-                            <img src="{{ url_for('static', filename='uploads/' ~ imagen.url) }}" alt="{{ producto.nombre }}" class="d-block w-100" style="height: auto; max-height: 500px; margin: 0 auto;">
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <a class="carousel-control-prev" href="#productCarousel" role="button" data-slide="prev">
-                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                        <span class="sr-only">Previous</span>
-                    </a>
-                    <a class="carousel-control-next" href="#productCarousel" role="button" data-slide="next">
-                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                        <span class="sr-only">Next</span>
-                    </a>
-                </div>
-                {% else %}
-                <div class="text-center">
-                    <figure>
-                        <img src="{{ url_for('static', filename='uploads/' ~ producto.imagenes[0].url) }}" alt="{{ producto.nombre }}" class="img-responsive" style="max-width: 100%; height: auto;">
-                    </figure>
-                </div>
-                {% endif %}
-                <div class="row animate-box">
-                    <div class="col-md-8 col-md-offset-2 text-center fh5co-heading">
-                        <h2>{{ producto.nombre }}</h2>
-                        <span class="price">{{ producto.precio }} €</span>
-                        <p>
-                            <form action="{{ url_for('agregar_carrito', producto_id=producto.id) }}" method="POST">
-                                <div class="form-group">
-                                    <label for="cantidad">Cantidad:</label>
-                                    <input type="number" name="cantidad" id="cantidad" class="form-control" value="1" min="1" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-outline btn-lg">Agregar al Carrito</button>
-                            </form>
-                        </p>
-                    </div>
+
+
+<!-- Tabs -->
+<div class="fh5co-tab-content-wrap">
+    <div class="fh5co-tab-content tab-content active" data-tab-content="1">
+        <div class="col-md-10 col-md-offset-1">
+            <h2 class="tab-button" data-tab="1">{{ producto.nombre }}</h2>
+            <p>{{ producto.descripcion }}</p>
+        </div>
+    </div>
+
+    <div class="fh5co-tab-content tab-content" data-tab-content="2">
+        <div class="col-md-10 col-md-offset-1">
+            <h3 class="tab-button" data-tab="2">Especificaciones del Producto</h3>
+            <ul>
+                <li>Especificación 1</li>
+                <li>Especificación 2</li>
+                <li>Especificación 3</li>
+                <li>Especificación 4</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="fh5co-tab-content tab-content" data-tab-content="3">
+    <div class="col-md-10 col-md-offset-1">
+        <h3 class="tab-button" data-tab="3">Clientes Satisfechos</h3>
+        <div class="feed">
+            {% for valoracion in producto.valoraciones %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">{{ valoracion.usuario.nombre }}</h5>
+                    <p class="card-text">{{ valoracion.comentario }}</p>
+                    <p class="card-text">
+                        <span class="rate">
+                            {% for i in range(1, 6) %}
+                                <i class="icon-star2 {% if i <= valoracion.puntuacion %}text-warning filled-star{% else %}empty-star{% endif %}"></i>
+                            {% endfor %}
+                        </span>
+                    </p>
                 </div>
             </div>
+            {% endfor %}
         </div>
-        <div class="row">
-            <div class="col-md-10 col-md-offset-1">
-                <div class="fh5co-tabs animate-box">
-                    <ul class="fh5co-tab-nav">
-                        <li class="active"><a href="#" data-tab="1"><span class="icon visible-xs"><i class="icon-file"></i></span><span class="hidden-xs">Detalles del Producto</span></a></li>
-                        <li><a href="#" data-tab="2"><span class="icon visible-xs"><i class="icon-bar-graph"></i></span><span class="hidden-xs">Especificaciones</span></a></li>
-                        <li><a href="#" data-tab="3"><span class="icon visible-xs"><i class="icon-star"></i></span><span class="hidden-xs">Comentarios y Calificaciones</span></a></li>
-                    </ul>
-
-                    <!-- Tabs -->
-                    <div class="fh5co-tab-content-wrap">
-
-                        <div class="fh5co-tab-content tab-content active" data-tab-content="1">
-                            <div class="col-md-10 col-md-offset-1">
-                                <h2>{{ producto.nombre }}</h2>
-                                <p>{{ producto.descripcion }}</p>
-                            </div>
-                        </div>
-
-                        <div class="fh5co-tab-content tab-content" data-tab-content="2">
-                            <div class="col-md-10 col-md-offset-1">
-                                <h3>Especificaciones del Producto</h3>
-                                <ul>
-                                    <li>Especificación 1</li>
-                                    <li>Especificación 2</li>
-                                    <li>Especificación 3</li>
-                                    <li>Especificación 4</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div class="fh5co-tab-content tab-content" data-tab-content="3">
-                            <div class="col-md-10 col-md-offset-1">
-                                <h3>Clientes Satisfechos</h3>
-                                <div class="feed">
-                                    <div>
-                                        <blockquote>
-                                            <p>Comentarios del comprador 1.</p>
-                                        </blockquote>
-                                        <h3>&mdash; Louie Knight</h3>
-                                        <span class="rate">
-                                            <i class="icon-star2"></i>
-                                            <i class="icon-star2"></i>
-                                            <i class="icon-star2"></i>
-                                            <i class="icon-star2"></i>
-                                            <i class="icon-star2"></i>
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <blockquote>
-                                            <p>Comentarios del comprador 2.</p>
-                                        </blockquote>
-                                        <h3>&mdash; Joefrey Gwapo</h3>
-                                        <span class="rate">
-                                            <i class="icon-star2"></i>
-                                            <i class="icon-star2"></i>
-                                            <i class="icon-star2"></i>
-                                            <i class="icon-star2"></i>
-                                            <i class="icon-star2"></i>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
+        {% if ha_comprado %}
+        <div class="leave-comment">
+            <h3>Deja tu valoración</h3>
+            <form action="{{ url_for('valorar_producto', producto_id=producto.id) }}" method="POST">
+                <div class="form-group">
+                    <label for="puntuacion">Puntuación:</label>
+                    <select class="form-control" id="puntuacion" name="puntuacion" required>
+                        <option value="1">1 estrella</option>
+                        <option value="2">2 estrellas</option>
+                        <option value="3">3 estrellas</option>
+                        <option value="4">4 estrellas</option>
+                        <option value="5">5 estrellas</option>
+                    </select>
                 </div>
+                <div class="form-group">
+                    <label for="comentario">Comentario:</label>
+                    <textarea class="form-control" id="comentario" name="comentario" rows="4"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Enviar Valoración</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .rate .icon-star2 {
+        font-size: 18px;
+        margin-right: 2px;
+    }
+    .filled-star {
+        color: #ffd700; /* Color dorado para las estrellas llenas */
+    }
+    .empty-star {
+        color: transparent;
+        -webkit-text-stroke: 1px #ffd700; /* Contorno dorado para las estrellas vacías */
+        text-stroke: 1px #ffd700; /* Contorno dorado para las estrellas vacías */
+    }
+</style>
+
+</div>
+
+<!-- JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.fh5co-tab-content');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tab = button.getAttribute('data-tab');
+
+            tabContents.forEach(content => {
+                if (content.getAttribute('data-tab-content') === tab) {
+                    content.classList.add('active');
+                    content.classList.remove('hidden-tab');
+                } else {
+                    content.classList.remove('active');
+                    content.classList.add('hidden-tab');
+                }
+            });
+        });
+    });
+});
+</script>
+
+
+
             </div>
         </div>
     </div>
 </div>
-
+<div class="espacio2"></div>
 <div id="fh5co-started">
     <div class="container">
         <div class="row animate-box">
@@ -165,13 +223,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
-<script>
-$(document).ready(function(){
-    $('.carousel').carousel({
-        interval: 2000
-    });
-});
-</script>
 {% endblock %}
+

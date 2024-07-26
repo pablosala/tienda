@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting to TPV</title>
+</head>
+<body>
+    <h1>Redirecting to TPV</h1>
+    <form id="tpv_form" action="{{ config.TPV_URL }}" method="POST">
+        <input type="hidden" name="Ds_SignatureVersion" value="HMAC_SHA256_V1"/>
+        <input type="hidden" name="Ds_MerchantParameters" value="{{ merchant_parameters }}"/>
+        <input type="hidden" name="Ds_Signature" value="{{ signature }}"/>
+    </form>
+    <script>
+        document.getElementById('tpv_form').submit();
+    </script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .espacio {
+        margin-top: 70px;
+    }
+    .espacio2 {
+        margin-top: 30px;
+    }
+</style>
+<div class="container mt-5">
+  <h2>Personaliza tu Encimera</h2>
+  <form method="post" action="{{ url_for('customize_countertop') }}">
+      <div class="form-group row">
+          <label for="length" class="col-sm-2 col-form-label">Largo (cm):</label>
+          <div class="col-sm-10">
+              <input type="number" class="form-control" id="length" name="length" required onchange="update3DModel()">
+          </div>
+      </div>
+      <div class="form-group row">
+          <label for="width" class="col-sm-2 col-form-label">Ancho (cm):</label>
+          <div class="col-sm-10">
+              <input type="number" class="form-control" id="width" name="width" required onchange="update3DModel()">
+          </div>
+      </div>
+      <div class="form-group row">
+          <label for="sink" class="col-sm-2 col-form-label">Tipo de Lavabo:</label>
+          <div class="col-sm-10">
+              <select class="form-control" id="sink" name="sink" required onchange="update3DModel()">
+                  <option value="">Seleccione su opción</option>
+                  <option value="lavabo1">Lavabo 1</option>
+                  <option value="lavabo2">Lavabo 2</option>
+                  <option value="lavabo3">Lavabo 3</option>
+              </select>
+          </div>
+      </div>
+      <div class="form-group row">
+          <label for="color" class="col-sm-2 col-form-label">Color:</label>
+          <div class="col-sm-10">
+              <select class="form-control" id="color" name="color" required onchange="update3DModel()">
+                  <option value="">Seleccione su opción</option>
+                  <option value="rojo">Rojo</option>
+                  <option value="azul">Azul</option>
+                  <option value="blanco">Blanco</option>
+              </select>
+          </div>
+      </div>
+      <div class="form-group row">
+          <label for="edge" class="col-sm-2 col-form-label">Tipo de Canto:</label>
+          <div class="col-sm-10">
+              <select class="form-control" id="edge" name="edge" required onchange="update3DModel()">
+                  <option value="">Seleccione su opción</option>
+                  <option value="recto">Recto</option>
+                  <option value="redondo">Redondo</option>
+              </select>
+          </div>
+      </div>
+      <div class="form-group row">
+          <label for="backsplash" class="col-sm-2 col-form-label">Tipo de Copete:</label>
+          <div class="col-sm-10">
+              <select class="form-control" id="backsplash" name="backsplash" required onchange="update3DModel()">
+                  <option value="">Seleccione su opción</option>
+                  <option value="recto">Recto</option>
+                  <option value="sanitario">Sanitario</option>
+              </select>
+          </div>
+      </div>
+      <div class="form-group row">
+          <div class="col-sm-10 offset-sm-2">
+              <button type="submit" class="btn btn-primary">Personalizar Encimera</button>
+          </div>
+      </div>
+  </form>
+</div>
+<!-- Contenedor para el modelo 3D -->
+<div id="3d-container" style="width: 100%; height: 500px; margin-top: 20px; display: flex; justify-content: center;"></div>
+<div class="espacio"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+let scene, camera, renderer, countertop, sink, controls;
+
+function init3D() {
+    // Escena
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth * 0.6, 500); // Ajustar el tamaño del canvas
+    document.getElementById('3d-container').appendChild(renderer.domElement);
+
+    // Controles de órbita
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    // Luz
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 5, 5).normalize();
+    scene.add(light);
+
+    // Encimera inicial
+    createCountertop('recto');
+
+    // Fregadero (cubo pequeño como ejemplo)
+    const sinkGeometry = new THREE.BoxGeometry(0.3, 0.1, 0.3);
+    const sinkMaterial = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+    sink = new THREE.Mesh(sinkGeometry, sinkMaterial);
+    sink.position.y = -0.1; // Posicionar el fregadero justo debajo de la encimera
+    scene.add(sink);
+
+    camera.position.z = 2;
+    controls.update();
+
+    window.addEventListener('keydown', onDocumentKeyDown, false);
+
+    animate();
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+function createCountertop(edgeType) {
+    // Remover encimera existente si la hay
+    if (countertop) {
+        scene.remove(countertop);
+    }
+
+    let geometry;
+    if (edgeType === 'redondo') {
+        // Crear geometría con bordes redondeados
+        const shape = new THREE.Shape();
+        const x = -0.5, y = -0.05, width = 1, height = 0.1, radius = 0.05; // Radio pequeño para redondear ligeramente
+        shape.moveTo(x, y + radius);
+        shape.lineTo(x, y + height - radius);
+        shape.quadraticCurveTo(x, y + height, x + radius, y + height);
+        shape.lineTo(x + width - radius, y + height);
+        shape.quadraticCurveTo(x + width, y + height, x + width, y + height - radius);
+        shape.lineTo(x + width, y + radius);
+        shape.quadraticCurveTo(x + width, y, x + width - radius, y);
+        shape.lineTo(x + radius, y);
+        shape.quadraticCurveTo(x, y, x, y + radius);
+
+        const extrudeSettings = {
+            steps: 1,
+            depth: 1,
+            bevelEnabled: false
+        };
+        geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    } else {
+        // Crear geometría estándar
+        geometry = new THREE.BoxGeometry(1, 0.1, 1);
+    }
+
+    const material = new THREE.MeshPhongMaterial({ color: 0xffffff });
+    countertop = new THREE.Mesh(geometry, material);
+    scene.add(countertop);
+}
+
+window.update3DModel = function update3DModel() {
+    // Asegúrate de que el modelo 3D está inicializado
+    if (!countertop || !sink) return;
+
+    // Obtener valores seleccionados
+    const length = parseFloat(document.getElementById('length').value);
+    const width = parseFloat(document.getElementById('width').value);
+    const color = document.getElementById('color').value;
+    const edge = document.getElementById('edge').value;
+
+    // Crear la encimera con el tipo de canto seleccionado
+    createCountertop(edge);
+
+    // Actualizar dimensiones
+    countertop.scale.set(length / 100 || 1, 1, width / 100 || 1);
+
+    // Actualizar color de la encimera
+    if (color === 'rojo') {
+        countertop.material.color.set(0xff0000);
+    } else if (color === 'azul') {
+        countertop.material.color.set(0x0000ff);
+    } else if (color === 'blanco') {
+        countertop.material.color.set(0xffffff);
+    }
+}
+
+function onDocumentKeyDown(event) {
+    const step = 0.01;
+    switch (event.key) {
+        case 'ArrowUp':
+            moveSink(0, -step);
+            break;
+        case 'ArrowDown':
+            moveSink(0, step);
+            break;
+        case 'ArrowLeft':
+            moveSink(-step, 0);
+            break;
+        case 'ArrowRight':
+            moveSink(step, 0);
+            break;
+    }
+}
+
+function moveSink(deltaX, deltaZ) {
+    sink.position.x += deltaX;
+    sink.position.z += deltaZ;
+
+    // Limitar el movimiento del fregadero a la superficie de la encimera
+    const halfLength = (parseFloat(document.getElementById('length').value) / 200) - 0.15;
+    const halfWidth = (parseFloat(document.getElementById('width').value) / 200) - 0.15;
+    sink.position.x = Math.max(-halfLength, Math.min(halfLength, sink.position.x));
+    sink.position.z = Math.max(-halfWidth, Math.min(halfWidth, sink.position.z));
+}
+
+window.onload = init3D;
+</script>
+{% endblock %}
