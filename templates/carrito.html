@@ -4,48 +4,74 @@
 <div class="container mt-5">
     <h2>Mi Carrito</h2>
     {% if items %}
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Precio</th>
-                    <th>Total</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                <tr>
-                    <td>{{ item.producto.nombre }}</td>
-                    <td>
-                        <form action="{{ url_for('actualizar_carrito') }}" method="POST" class="form-inline">
-                            <input type="hidden" name="producto_id" value="{{ item.producto.id }}">
-                            <input type="number" name="cantidad" value="{{ item.cantidad }}" min="1" class="form-control">
-                            <button type="submit" class="btn btn-primary ml-2">Actualizar</button>
-                        </form>
-                    </td>
-                    <td>{{ item.producto.precio }}€</td>
-                    <td>{{ item.cantidad * item.producto.precio }}€</td>
-                    <td>
-                        <form action="{{ url_for('eliminar_del_carrito') }}" method="POST">
-                            <input type="hidden" name="producto_id" value="{{ item.producto.id }}">
-                            <button type="submit" class="btn btn-danger">Eliminar</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-                <tr>
-                    <td colspan="3" class="text-right"><strong>Total del Pedido:</strong></td>
-                    <td colspan="2"><strong>{{ total }}€</strong></td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <div class="message-flash">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% set category, message = messages[-1] %}  <!-- Obtener el último mensaje -->
+                            <p class="flash-message-text {{ category }}">{{ message }}</p>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item.producto.nombre }}</td>
+                        <td>
+                            <form action="{{ url_for('actualizar_carrito') }}" method="POST" class="d-flex align-items-center">
+                                <input type="hidden" name="producto_id" value="{{ item.producto.id }}">
+                                {% if item.producto.stock > 0 %}
+                                    <input type="number" name="cantidad_{{ item.producto.id }}" value="{{ item.cantidad }}" min="1" max="{{ item.producto.stock }}" class="form-control form-control-sm" style="width: 70px;" required>
+                                    {% if item.cantidad > item.producto.stock %}
+                                        <span class="text-danger">Cantidad excede el stock disponible</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-danger">Agotado</span>
+                                {% endif %}
+                                <button type="submit" class="btn btn-primary btn-sm ml-2">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </form>
+                        </td>
+                        <td>{{ item.producto.precio }}€</td>
+                        <td>{{ item.cantidad * item.producto.precio }}€</td>
+                        <td>
+                            <form action="{{ url_for('eliminar_del_carrito') }}" method="POST">
+                                <input type="hidden" name="producto_id" value="{{ item.producto.id }}">
+                                <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <td colspan="3" class="text-right"><strong>Total del Pedido:</strong></td>
+                        <td colspan="2"><strong>{{ total }}€</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <form action="{{ url_for('checkout') }}" method="GET">
-            <button type="submit" class="btn btn-primary">Realizar Pedido</button>
+            <button type="submit" class="btn btn-primary btn-block" {% if hay_agotados %}disabled{% endif %}>Realizar Pedido</button>
         </form>
+        {% if hay_agotados %}
+            <p class="text-danger mt-3">Hay productos agotados o cantidades que exceden el stock en tu carrito. Elimínalos o ajusta las cantidades para poder realizar el pedido.</p>
+        {% endif %}
     {% else %}
         <p>No tienes productos en tu carrito.</p>
     {% endif %}
 </div>
+
+<!-- Añadir el enlace a la CDN de Font Awesome para los iconos -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
 {% endblock %}

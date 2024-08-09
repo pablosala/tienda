@@ -11,6 +11,14 @@
         <input type="number" name="cantidad" value="1" min="1">
         <input type="submit" value="Agregar al Carrito">
     </form>
+<div class="message-flash">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% set category, message = messages[-1] %}  <!-- Obtener el último mensaje -->
+            <p class="flash-message-text {{ category }}">{{ message }}</p>
+        {% endif %}
+    {% endwith %}
+</div>
     <a href="{{ url_for('index') }}">Volver a la tienda</a>
 </body>
 </html>

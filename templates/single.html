@@ -28,20 +28,30 @@
     <div class="row header-line">
         <div class="col-md-10 col-md-offset-1 animate-box espacio">
             {% if producto.imagenes|length > 1 %}
-            <div id="productCarousel" class="carousel slide" data-ride="carousel">
-                <div class="carousel-inner">
+            <div id="carousel-example-generic" class="carousel slide" data-ride="carousel">
+                <!-- Indicators -->
+                <ol class="carousel-indicators">
                     {% for imagen in producto.imagenes %}
-                    <div class="carousel-item {% if loop.first %}active{% endif %}">
+                    <li data-target="#carousel-example-generic" data-slide-to="{{ loop.index0 }}" class="{% if loop.first %}active{% endif %}"></li>
+                    {% endfor %}
+                </ol>
+
+                <!-- Wrapper for slides -->
+                <div class="carousel-inner" role="listbox">
+                    {% for imagen in producto.imagenes %}
+                    <div class="item {% if loop.first %}active{% endif %}">
                         <img src="{{ url_for('static', filename='uploads/' ~ imagen.url) }}" alt="{{ producto.nombre }}" class="d-block w-100" style="height: auto; max-height: 500px; margin: 0 auto;">
                     </div>
                     {% endfor %}
                 </div>
-                <a class="carousel-control-prev" href="#productCarousel" role="button" data-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+
+                <!-- Controls -->
+                <a class="left carousel-control" href="#carousel-example-generic" role="button" data-slide="prev">
+                    <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
                     <span class="sr-only">Previous</span>
                 </a>
-                <a class="carousel-control-next" href="#productCarousel" role="button" data-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <a class="right carousel-control" href="#carousel-example-generic" role="button" data-slide="next">
+                    <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
                     <span class="sr-only">Next</span>
                 </a>
             </div>
@@ -57,13 +67,17 @@
                     <h2>{{ producto.nombre }}</h2>
                     <span class="price">{{ producto.precio }} €</span>
                     <p>
+                        {% if producto.stock > 0 %}
                         <form action="{{ url_for('agregar_carrito', producto_id=producto.id) }}" method="POST">
                             <div class="form-group">
                                 <label for="cantidad">Cantidad:</label>
-                                <input type="number" name="cantidad" id="cantidad" class="form-control" value="1" min="1" required>
+                                <input type="number" name="cantidad" id="cantidad" class="form-control" value="1" min="1" max="{{ producto.stock }}" required>
                             </div>
                             <button type="submit" class="btn btn-primary btn-outline btn-lg">Agregar al Carrito</button>
                         </form>
+                        {% else %}
+                        <span class="text-danger">Agotado</span>
+                        {% endif %}
                     </p>
                 </div>
             </div>
@@ -78,118 +92,121 @@
                     <li><a href="#" class="tab-button" data-tab="3"><span class="icon visible-xs"><i class="icon-star"></i></span><span class="hidden-xs">Comentarios y Calificaciones</span></a></li>
                 </ul>
 
+                <div class="fh5co-tab-content-wrap">
+                    <div class="fh5co-tab-content tab-content active" data-tab-content="1">
+                        <div class="col-md-10 col-md-offset-1">
+                            <h2 class="tab-button" data-tab="1">{{ producto.nombre }}</h2>
+                            <p>{{ producto.descripcion }}</p>
+                        </div>
+                    </div>
 
+                    <div class="fh5co-tab-content tab-content" data-tab-content="2">
+                        <div class="col-md-10 col-md-offset-1">
+                            <h3 class="tab-button" data-tab="2">Especificaciones del Producto</h3>
+                            <ul>
+                                {% for especificacion in especificaciones %}
+                                <li>{{ especificacion.descripcion }}</li>
+                                {% else %}
+                                <li>Este producto no tiene especificaciones.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
 
-<!-- Tabs -->
-<div class="fh5co-tab-content-wrap">
-    <div class="fh5co-tab-content tab-content active" data-tab-content="1">
-        <div class="col-md-10 col-md-offset-1">
-            <h2 class="tab-button" data-tab="1">{{ producto.nombre }}</h2>
-            <p>{{ producto.descripcion }}</p>
-        </div>
-    </div>
+                    <div class="fh5co-tab-content tab-content" data-tab-content="3">
+                        <div class="col-md-10 col-md-offset-1">
+                            <h3 class="tab-button" data-tab="3">Clientes Satisfechos</h3>
+                            <div class="message-flash">
+                                {% with messages = get_flashed_messages(with_categories=true) %}
+                                    {% if messages %}
+                                        {% set category, message = messages[-1] %}  <!-- Obtener el último mensaje -->
+                                        <p class="flash-message-text {{ category }}">{{ message }}</p>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                            <div class="feed">
+                                {% for valoracion in producto.valoraciones %}
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ valoracion.usuario.nombre }}</h5>
+                                        <p class="card-text">{{ valoracion.comentario }}</p>
+                                        <p class="card-text">
+                                            <span class="rate">
+                                                {% for i in range(1, 6) %}
+                                                    <i class="icon-star2 {% if i <= valoracion.puntuacion %}text-warning filled-star{% else %}empty-star{% endif %}"></i>
+                                                {% endfor %}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if ha_comprado %}
+                            <div class="leave-comment">
+                                <h3>Deja tu valoración</h3>
+                                <form action="{{ url_for('valorar_producto', producto_id=producto.id) }}" method="POST">
+                                    <div class="form-group">
+                                        <label for="puntuacion">Puntuación:</label>
+                                        <select class="form-control" id="puntuacion" name="puntuacion" required>
+                                            <option value="1">1 estrella</option>
+                                            <option value="2">2 estrellas</option>
+                                            <option value="3">3 estrellas</option>
+                                            <option value="4">4 estrellas</option>
+                                            <option value="5">5 estrellas</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="comentario">Comentario:</label>
+                                        <textarea class="form-control" id="comentario" name="comentario" rows="4"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Enviar Valoración</button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
 
-    <div class="fh5co-tab-content tab-content" data-tab-content="2">
-                <div class="col-md-10 col-md-offset-1">
-                    <h3 class="tab-button" data-tab="2">Especificaciones del Producto</h3>
-                    <ul>
-                        {% for especificacion in especificaciones %}
-                        <li>{{ especificacion.descripcion }}</li>
-                        {% else %}
-                        <li>Este producto no tiene especificaciones.</li>
-                        {% endfor %}
-                    </ul>
+                    <style>
+                        .rate .icon-star2 {
+                            font-size: 18px;
+                            margin-right: 2px;
+                        }
+                        .filled-star {
+                            color: #ffd700; /* Color dorado para las estrellas llenas */
+                        }
+                        .empty-star {
+                            color: transparent;
+                            -webkit-text-stroke: 1px #ffd700; /* Contorno dorado para las estrellas vacías */
+                            text-stroke: 1px #ffd700; /* Contorno dorado para las estrellas vacías */
+                        }
+                    </style>
+
                 </div>
-            </div>
 
-    <div class="fh5co-tab-content tab-content" data-tab-content="3">
-    <div class="col-md-10 col-md-offset-1">
-        <h3 class="tab-button" data-tab="3">Clientes Satisfechos</h3>
-        <div class="feed">
-            {% for valoracion in producto.valoraciones %}
-            <div class="card mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">{{ valoracion.usuario.nombre }}</h5>
-                    <p class="card-text">{{ valoracion.comentario }}</p>
-                    <p class="card-text">
-                        <span class="rate">
-                            {% for i in range(1, 6) %}
-                                <i class="icon-star2 {% if i <= valoracion.puntuacion %}text-warning filled-star{% else %}empty-star{% endif %}"></i>
-                            {% endfor %}
-                        </span>
-                    </p>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% if ha_comprado %}
-        <div class="leave-comment">
-            <h3>Deja tu valoración</h3>
-            <form action="{{ url_for('valorar_producto', producto_id=producto.id) }}" method="POST">
-                <div class="form-group">
-                    <label for="puntuacion">Puntuación:</label>
-                    <select class="form-control" id="puntuacion" name="puntuacion" required>
-                        <option value="1">1 estrella</option>
-                        <option value="2">2 estrellas</option>
-                        <option value="3">3 estrellas</option>
-                        <option value="4">4 estrellas</option>
-                        <option value="5">5 estrellas</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="comentario">Comentario:</label>
-                    <textarea class="form-control" id="comentario" name="comentario" rows="4"></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary">Enviar Valoración</button>
-            </form>
-        </div>
-        {% endif %}
-    </div>
-</div>
+                <!-- JavaScript -->
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const tabButtons = document.querySelectorAll('.tab-button');
+                        const tabContents = document.querySelectorAll('.fh5co-tab-content');
 
-<style>
-    .rate .icon-star2 {
-        font-size: 18px;
-        margin-right: 2px;
-    }
-    .filled-star {
-        color: #ffd700; /* Color dorado para las estrellas llenas */
-    }
-    .empty-star {
-        color: transparent;
-        -webkit-text-stroke: 1px #ffd700; /* Contorno dorado para las estrellas vacías */
-        text-stroke: 1px #ffd700; /* Contorno dorado para las estrellas vacías */
-    }
-</style>
+                        tabButtons.forEach(button => {
+                            button.addEventListener('click', (e) => {
+                                e.preventDefault(); // Previene que el enlace haga scroll
+                                const tab = button.getAttribute('data-tab');
 
-</div>
-
-<!-- JavaScript -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const tabButtons = document.querySelectorAll('.tab-button');
-    const tabContents = document.querySelectorAll('.fh5co-tab-content');
-
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const tab = button.getAttribute('data-tab');
-
-            tabContents.forEach(content => {
-                if (content.getAttribute('data-tab-content') === tab) {
-                    content.classList.add('active');
-                    content.classList.remove('hidden-tab');
-                } else {
-                    content.classList.remove('active');
-                    content.classList.add('hidden-tab');
-                }
-            });
-        });
-    });
-});
-</script>
-
-
-
+                                tabContents.forEach(content => {
+                                    if (content.getAttribute('data-tab-content') === tab) {
+                                        content.classList.add('active');
+                                        content.classList.remove('hidden-tab');
+                                    } else {
+                                        content.classList.remove('active');
+                                        content.classList.add('hidden-tab');
+                                    }
+                                });
+                            });
+                        });
+                    });
+                </script>
             </div>
         </div>
     </div>
@@ -224,5 +241,6 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endblock %}
 
 {% block scripts %}
+<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 {% endblock %}
-

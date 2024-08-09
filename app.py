@@ -35,7 +35,7 @@ app.config.from_object('config.Config')
 
 
 app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static/uploads')
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'glb'}
 app.config['MAX_CONTENT_PATH'] = 16 * 1024 * 1024  # 16 MB limit
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://sammy:password@localhost/tienda_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -283,13 +283,14 @@ def login():
             return redirect(url_for('index'))
         else:
             flash('Credenciales inválidas', 'danger')
+            return redirect(url_for('login'))  # Redirigir para evitar el reenvío del formulario
     return render_template('login.html')
+
 
 @app.route('/logout', methods=['POST'])
 @login_required
 def logout():
     logout_user()
-    flash('Has cerrado sesión exitosamente.', 'success')
     return redirect(url_for('index'))
 
 @app.route('/')
@@ -298,6 +299,10 @@ def index():
     for producto in productos:
         producto.imagen_principal = producto.imagenes[0].url if producto.imagenes else 'default.jpg'
     return render_template('index.html', productos=productos)
+
+@app.route('/model')
+def model():
+    return render_template('model.html')
 
 @app.route('/about')
 def about():
@@ -454,7 +459,7 @@ def checkout():
         direccion_envio_id = request.form.get('direccion_envio')
         metodo_pago = request.form.get('metodo_pago')
 
-        # Validar y manejar nueva dirección
+        # Validar si se selecciona una dirección existente o se crea una nueva
         if direccion_envio_id == 'nueva':
             nueva_direccion = Direccion(
                 nombre=request.form['nombre_direccion'],
@@ -468,8 +473,9 @@ def checkout():
             db.session.add(nueva_direccion)
             db.session.flush()
             direccion_envio_id = nueva_direccion.id
-        elif not direccion_envio_id:
-            flash('Por favor seleccione o añada una dirección de envío.', 'danger')
+            db.session.commit()  # Confirmar la nueva dirección en la base de datos
+        elif not direccion_envio_id or not Direccion.query.filter_by(id=direccion_envio_id, usuario_id=usuario_id).first():
+            flash('Por favor seleccione una dirección válida o añada una nueva.', 'danger')
             return redirect(url_for('checkout'))
 
         if not metodo_pago:
@@ -514,8 +520,7 @@ def checkout():
     carrito_items = CarritoItem.query.filter_by(carrito_id=carrito.id).all()
     return render_template('checkout.html', title='Finalizar Compra', carrito_items=carrito_items, direcciones=direcciones, user=current_user)
 
-
-@app.route('/callback_ok', methods=['POST'])
+@app.route('/callback_ok', methods=['GET','POST'])
 @login_required
 def callback_ok():
     order_data = session.get('order_data')
@@ -557,10 +562,13 @@ def callback_ok():
     carrito.items = []
     db.session.commit()
 
-    flash('Pedido realizado con éxito.', 'success')
-    return redirect(url_for('index'))
+    usuario = Usuario.query.get(usuario_id)
+    enviar_correo_pedido(usuario.email, pedido)
 
-@app.route('/callback_ko', methods=['POST'])
+    flash('Pedido realizado con éxito.', 'success')
+    return redirect(url_for('detalles_cuenta'))
+
+@app.route('/callback_ko', methods=['GET','POST'])
 @login_required
 def callback_ko():
     flash('El pago no ha sido completado. Inténtelo nuevamente.', 'danger')
@@ -609,13 +617,20 @@ def category_products(category_id):
 
 
 @app.route('/producto/<int:producto_id>', methods=['GET', 'POST'])
-@login_required
 def producto_detalle(producto_id):
     producto = Producto.query.get_or_404(producto_id)
-    ha_comprado = Orden.query.filter_by(usuario_id=current_user.id).join(OrdenProducto).filter_by(producto_id=producto_id).all()
+    
+    ha_comprado = []
+    if current_user.is_authenticated:
+        ha_comprado = Orden.query.filter_by(usuario_id=current_user.id).join(OrdenProducto).filter_by(producto_id=producto_id).all()
+
     especificaciones = Especificacion.query.filter_by(producto_id=producto_id).all()
 
     if request.method == 'POST':
+        if not current_user.is_authenticated:
+            flash('Debes iniciar sesión para dejar una valoración.', 'danger')
+            return redirect(url_for('login'))
+
         puntuacion = int(request.form['puntuacion'])
         comentario = request.form['comentario']
 
@@ -646,17 +661,22 @@ def producto_detalle(producto_id):
 def agregar_carrito(producto_id):
     producto = Producto.query.get_or_404(producto_id)
     cantidad = int(request.form['cantidad'])
-    
-    # Obtener o crear el carrito para el usuario actual
+
+    if producto.stock < cantidad:
+        flash(f'No hay suficiente stock disponible para {producto.nombre}.', 'danger')
+        return redirect(url_for('product_detail', producto_id=producto_id))
+
     carrito = Carrito.query.filter_by(usuario_id=current_user.id).first()
     if not carrito:
         carrito = Carrito(usuario_id=current_user.id)
         db.session.add(carrito)
         db.session.commit()
 
-    # Verificar si el producto ya está en el carrito
     item = CarritoItem.query.filter_by(carrito_id=carrito.id, producto_id=producto_id).first()
     if item:
+        if item.cantidad + cantidad > producto.stock:
+            flash(f'No puedes añadir más de {producto.stock - item.cantidad} unidades de {producto.nombre} al carrito.', 'danger')
+            return redirect(url_for('product_detail', producto_id=producto_id))
         item.cantidad += cantidad
     else:
         item = CarritoItem(carrito_id=carrito.id, producto_id=producto_id, cantidad=cantidad)
@@ -666,41 +686,56 @@ def agregar_carrito(producto_id):
     flash(f'{producto.nombre} agregado al carrito', 'success')
     return redirect(url_for('index'))
 
-
-
 @app.route('/carrito')
 @login_required
 def carrito():
     carrito = Carrito.query.filter_by(usuario_id=current_user.id).first()
     items = carrito.items if carrito else []
     total = sum(item.cantidad * item.producto.precio for item in items)
-    return render_template('carrito.html', items=items, total=total)
+    hay_agotados = any(item.producto.stock <= 0 or item.cantidad > item.producto.stock for item in items)
+    return render_template('carrito.html', items=items, total=total, hay_agotados=hay_agotados)
 
 
 @app.route('/carrito/actualizar', methods=['POST'])
 @login_required
 def actualizar_carrito():
-    producto_id = request.form.get('producto_id')
-    cantidad = int(request.form.get('cantidad'))
-
-    item = CarritoItem.query.filter_by(carrito_id=current_user.carrito.id, producto_id=producto_id).first()
-    if item:
-        item.cantidad = cantidad
+    carrito = Carrito.query.filter_by(usuario_id=current_user.id).first()
+    if carrito:
+        for item in carrito.items:
+            producto_id = item.producto.id
+            nueva_cantidad = request.form.get(f'cantidad_{producto_id}')
+            if nueva_cantidad:
+                nueva_cantidad = int(nueva_cantidad)
+                if nueva_cantidad > item.producto.stock:
+                    flash(f'No puedes añadir más de {item.producto.stock} unidades de {item.producto.nombre}.', 'danger')
+                elif nueva_cantidad <= 0:
+                    db.session.delete(item)
+                else:
+                    item.cantidad = nueva_cantidad
         db.session.commit()
-        flash('Cantidad actualizada correctamente.', 'success')
+        flash('Carrito actualizado con éxito', 'success')
+    else:
+        flash('No se encontró el carrito.', 'danger')
     return redirect(url_for('carrito'))
 
 @app.route('/carrito/eliminar', methods=['POST'])
 @login_required
 def eliminar_del_carrito():
     producto_id = request.form.get('producto_id')
-
-    item = CarritoItem.query.filter_by(carrito_id=current_user.carrito.id, producto_id=producto_id).first()
-    if item:
-        db.session.delete(item)
-        db.session.commit()
-        flash('Producto eliminado del carrito.', 'success')
+    carrito = Carrito.query.filter_by(usuario_id=current_user.id).first()
+    if carrito:
+        item = CarritoItem.query.filter_by(carrito_id=carrito.id, producto_id=producto_id).first()
+        if item:
+            db.session.delete(item)
+            db.session.commit()
+            flash('Producto eliminado del carrito.', 'success')
+        else:
+            flash('El producto no se encontró en el carrito.', 'danger')
+    else:
+        flash('No se encontró el carrito.', 'danger')
     return redirect(url_for('carrito'))
+
+
 
 
 @app.route('/realizar_pedido', methods=['POST'])
@@ -711,12 +746,24 @@ def realizar_pedido():
         flash('El carrito está vacío', 'danger')
         return redirect(url_for('index'))
 
+    productos_agotados = [item.producto.nombre for item in carrito.items if item.producto.stock <= 0]
+    if productos_agotados:
+        flash(f'No puedes realizar el pedido. Los siguientes productos están agotados: {", ".join(productos_agotados)}.', 'danger')
+        return redirect(url_for('carrito'))
+
     total = sum(item.cantidad * item.producto.precio for item in carrito.items)
     orden = Orden(usuario_id=current_user.id, total=total)
     db.session.add(orden)
     db.session.commit()
 
     for item in carrito.items:
+        producto = Producto.query.get(item.producto_id)
+        if producto.stock < item.cantidad:
+            flash(f'No hay suficiente stock disponible para {producto.nombre}.', 'danger')
+            return redirect(url_for('carrito'))
+        producto.stock -= item.cantidad
+        db.session.commit()
+
         orden_producto = OrdenProducto(orden_id=orden.id, producto_id=item.producto_id, cantidad=item.cantidad, precio=item.producto.precio)
         db.session.add(orden_producto)
         db.session.delete(item)
@@ -726,7 +773,6 @@ def realizar_pedido():
     db.session.commit()
     flash('Pedido realizado con éxito', 'success')
     return redirect(url_for('index'))
-
 
 
 @app.route('/mis_pedidos')
@@ -869,6 +915,7 @@ def agregar_producto():
     categorias = Categoria.query.all()
     return render_template('agregar_producto.html', categorias=categorias)
 
+
 @app.route('/admin/editar_producto/<int:producto_id>', methods=['GET', 'POST'])
 @login_required
 def editar_producto(producto_id):
@@ -883,13 +930,12 @@ def editar_producto(producto_id):
         producto.precio = float(request.form['precio'])
         producto.stock = int(request.form['stock'])
         producto.categoria_id = int(request.form['categoria_id'])
-        db.session.commit()
         
         # Actualizar las especificaciones
         especificaciones = request.form.getlist('especificaciones')
         Especificacion.query.filter_by(producto_id=producto.id).delete()
-        for especificacion in especificaciones:
-            nueva_especificacion = Especificacion(descripcion=especificacion, producto_id=producto.id)
+        for descripcion in especificaciones:
+            nueva_especificacion = Especificacion(descripcion=descripcion, producto_id=producto.id)
             db.session.add(nueva_especificacion)
         
         # Guardar la imagen
@@ -905,9 +951,10 @@ def editar_producto(producto_id):
         flash('Producto editado con éxito', 'success')
         return redirect(url_for('admin_products'))
     
+    imagenes = producto.imagenes
     categorias = Categoria.query.all()
     especificaciones = Especificacion.query.filter_by(producto_id=producto.id).all()
-    return render_template('editar_producto.html', producto=producto, categorias=categorias, especificaciones=especificaciones)
+    return render_template('editar_producto.html', producto=producto, categorias=categorias, especificaciones=especificaciones, imagenes=imagenes)
 
 @app.route('/admin/eliminar_especificacion/<int:especificacion_id>', methods=['POST'])
 @login_required
@@ -954,12 +1001,36 @@ def eliminar_imagen(imagen_id):
 @login_required
 def eliminar_producto(producto_id):
     if current_user.role != 'admin':
+        flash('No tienes permiso para realizar esta acción.', 'danger')
         return redirect(url_for('index'))
+    
     producto = Producto.query.get_or_404(producto_id)
-    db.session.delete(producto)
-    db.session.commit()
-    flash('Producto eliminado con éxito', 'success')
+    imagenes = Imagen.query.filter_by(producto_id=producto.id).all()
+    valoraciones = Valoracion.query.filter_by(producto_id=producto.id).all()  # Ajuste para manejar valoraciones
+
+    try:
+        # Eliminar imágenes asociadas
+        for imagen in imagenes:
+            try:
+                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], imagen.url))
+            except Exception as e:
+                flash(f'Error al eliminar la imagen del sistema de archivos: {str(e)}', 'danger')
+            db.session.delete(imagen)
+        
+        # Eliminar valoraciones asociadas
+        for valoracion in valoraciones:
+            db.session.delete(valoracion)
+        
+        # Eliminar el producto
+        db.session.delete(producto)
+        db.session.commit()
+        flash('Producto, sus imágenes y valoraciones eliminados con éxito.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el producto: {str(e)}', 'danger')
+    
     return redirect(url_for('admin_products'))
+
 
 @app.route('/admin/ver_pedidos')
 @login_required
@@ -1185,6 +1256,38 @@ def send_email(to_email, subject, html_content):
     except Exception as e:
         print(f'Error al enviar correo: {e}')
 
+def enviar_correo_pedido(email, pedido):
+    items = OrdenProducto.query.filter_by(orden_id=pedido.id).all()
+
+    # Construir el cuerpo del correo electrónico en HTML
+    html_content = f"""
+    <html>
+        <body>
+            <p>Hola {pedido.usuario.nombre},</p>
+            <p>Gracias por tu compra. Aquí están los detalles de tu pedido:</p>
+            <p><strong>Pedido ID:</strong> {pedido.id}</p>
+            <p><strong>Total:</strong> {pedido.total} €</p>
+            <p><strong>Método de Pago:</strong> {pedido.metodo_pago}</p>
+            <p><strong>Dirección de Envío:</strong> {pedido.direccion_envio_id}</p>
+            <h4>Productos:</h4>
+            <ul>
+    """
+    for item in items:
+        html_content += f"<li>{item.producto.nombre}: {item.cantidad} x {item.precio} €</li>"
+
+    html_content += """
+            </ul>
+            <p>Gracias por comprar con nosotros.</p>
+            <p>Atentamente,</p>
+            <p>Tu Equipo de Ventas</p>
+        </body>
+    </html>
+    """
+
+    # Usar la función personalizada para enviar el correo
+    subject = 'Detalles de tu pedido'
+    send_email(to_email=email, subject=subject, html_content=html_content)
+
 @app.route('/send_email_test', methods=['POST'])
 def send_email_test():
     to_email = request.form['email']
@@ -1232,6 +1335,7 @@ def confirm_email(token):
             send_welcome_email(user.email)
             
             flash('Tu cuenta ha sido confirmada y registrada con éxito. Por favor, inicia sesión.', 'success')
+            session['email_confirmed'] = True  # Establecer estado de confirmación en la sesión
             return redirect(url_for('login'))
         except Exception as e:
             db.session.rollback()
@@ -1251,6 +1355,11 @@ def check_confirmation_status():
 
 @app.route('/await_confirmation/<email>')
 def await_confirmation(email):
+    user = Usuario.query.filter_by(email=email).first()
+    if user and user.is_confirmed:
+        flash('Tu cuenta ya ha sido confirmada. Por favor, inicia sesión.', 'success')
+        return redirect(url_for('login'))
+    
     return render_template('await_confirmation.html', email=email)
 
 

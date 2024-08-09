@@ -37,9 +37,7 @@
                 <div class="input-group mb-2">
                     <input type="text" class="form-control" name="especificaciones" value="{{ especificacion.descripcion }}" required>
                     <div class="input-group-append">
-                        <form action="{{ url_for('eliminar_especificacion', especificacion_id=especificacion.id) }}" method="POST" style="display:inline;">
-                            <button type="submit" class="btn btn-danger">Eliminar</button>
-                        </form>
+                        <button type="button" class="btn btn-danger" onclick="eliminarEspecificacion(this)">Eliminar</button>
                     </div>
                 </div>
                 {% endfor %}
@@ -52,7 +50,26 @@
         </div>
         <button type="submit" class="btn btn-primary">Guardar Cambios</button>
     </form>
+        <h3>Imágenes del Producto</h3>
+    <div class="row">
+        {% for imagen in producto.imagenes %}
+        <div class="col-6 col-md-3">
+            <div class="card mb-3">
+                <img src="{{ url_for('static', filename='uploads/' ~ imagen.url) }}" class="card-img-top img-thumbnail" alt="Imagen del producto">
+                <div class="card-body p-2">
+                    <form method="post" action="{{ url_for('eliminar_imagen', imagen_id=imagen.id) }}">
+                        <input type="hidden" name="producto_id" value="{{ producto.id }}">
+                        <button type="submit" class="btn btn-danger btn-block">Eliminar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 </div>
+
+</div>
+
 
 <script>
 function agregarEspecificacion() {
@@ -69,10 +86,21 @@ function agregarEspecificacion() {
     var inputGroupAppend = document.createElement('div');
     inputGroupAppend.className = 'input-group-append';
 
+    var deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'btn btn-danger';
+    deleteButton.textContent = 'Eliminar';
+    deleteButton.onclick = function() { eliminarEspecificacion(deleteButton); };
+
+    inputGroupAppend.appendChild(deleteButton);
     inputGroup.appendChild(input);
     inputGroup.appendChild(inputGroupAppend);
 
     container.appendChild(inputGroup);
+}
+
+function eliminarEspecificacion(button) {
+    button.closest('.input-group').remove();
 }
 </script>
 {% endblock %}

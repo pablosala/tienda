@@ -7,6 +7,15 @@ Registrarse
 {% block content %}
 <div class="container mt-5">
     <h2 class="mb-4">Registrarse</h2>
+<div class="message-flash">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% set category, message = messages[-1] %}  <!-- Obtener el último mensaje -->
+            <p class="flash-message-text {{ category }}">{{ message }}</p>
+        {% endif %}
+    {% endwith %}
+</div>
+
     <form method="post" action="{{ url_for('register') }}">
         <div class="form-group">
             <label for="nombre">Nombre:</label>

@@ -1,8 +1,18 @@
 {% extends 'base.html' %}
 
 {% block content %}
+
 <div class="container mt-5">
   <h2>Accede a tu cuenta</h2>
+<div class="message-flash">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% set category, message = messages[-1] %}  <!-- Obtener el último mensaje -->
+            <p class="flash-message-text {{ category }}">{{ message }}</p>
+        {% endif %}
+    {% endwith %}
+</div>
+
   <form method="post" action="{{ url_for('login') }}">
       <div class="form-group row">
           <label for="email" class="col-sm-2 col-form-label">Email:</label>

@@ -36,7 +36,51 @@
     <script src="{{ url_for('static', filename='js/respond.min.js') }}"></script>
     <![endif]-->
 
-    <!-- Custom CSS -->
+
+    <style>
+/* Estilo para el texto de mensajes flash */
+.flash-message-text {
+    margin: 0; /* Eliminar márgenes adicionales */
+    padding: 0; /* Eliminar padding adicional */
+    font-weight: bold; /* Opcional: puedes hacer que el texto sea en negrita si lo deseas */
+    opacity: 1; /* Comienza completamente visible */
+    transition: opacity 1s ease-out; /* Transición suave de opacidad */
+}
+
+/* Colores basados en la categoría del mensaje */
+.flash-message-text.warning {
+    color: #ffc107; /* Amarillo para warning */
+}
+
+.flash-message-text.success {
+    color: #007bff; /* Azul para success */
+}
+
+.flash-message-text.danger {
+    color: #ff0000; /* Rojo para danger */
+}
+
+    </style>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            var flashMessage = document.querySelector('.flash-message-text');
+            if (flashMessage) {
+                flashMessage.style.opacity = '0';  // Desvanecer el mensaje
+            }
+        }, 5000);  // Esperar 5 segundos antes de iniciar el desvanecimiento
+
+        // Opcional: Eliminar el mensaje del DOM después de la transición
+        setTimeout(function() {
+            var flashMessage = document.querySelector('.flash-message-text');
+            if (flashMessage) {
+                flashMessage.remove();
+            }
+        }, 6000);  // Eliminar 1 segundo después del inicio de la transición
+    });
+</script>
+
+    <!-- Custom CSS -->    
     <style>
         /* Barra superior marrón claro */
         .top-bar {
@@ -167,8 +211,9 @@
                         {% if current_user.is_authenticated and current_user.role == 'admin' %}
                             <li><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
                         {% endif %}
+                        <li><a href="{{ url_for('index') }}">Inicio</a></li>
                         <li class="has-dropdown">
-                            <a href="{{ url_for('index') }}" id="tienda-link">Tienda</a>
+                            <a>Tienda</a>
                             <ul class="dropdown">
                                 <li><a href="{{ url_for('customize_countertop') }}">Diseñar Encimera</a></li>
                                 {% for categoria in categorias %}

@@ -38,25 +38,26 @@
 
     <!-- Custom CSS -->
     <style>
-        /* Adjust the width of the sidebar */
+        /* Ajuste de ancho del sidebar */
         #sidebar {
-            width: 200px; /* Set the desired width here */
+            width: 200px;
             flex-shrink: 0;
         }
 
-        /* Ensure the content wrapper takes up the remaining space */
+        /* Permitir que el contenido crezca y ajuste el padding */
         #page-content-wrapper {
             flex-grow: 1;
             padding: 20px;
+            overflow-x: auto; /* Permitir desbordamiento horizontal */
         }
 
-        /* Wrapper should be a flex container */
+        /* Asegurar que el wrapper sea un contenedor flex */
         #wrapper {
-            display: flex;
-            height: 100vh; /* Make sure it takes up the full height of the viewport */
-            overflow: hidden;
+            height: 100vh; /* Asegurar que tome toda la altura de la ventana */
+            overflow-x: auto; /* Permitir desbordamiento horizontal */
         }
-                /* Barra superior marrón claro */
+
+        /* Barra superior marrón claro */
         .top-bar {
             background-color: #D2B48C;
             color: white;
@@ -136,7 +137,7 @@
             display: block;
         }
 
-        /* Style the menu-2 items */
+        /* Estilo para los elementos del menú */
         .fh5co-nav .menu-2 ul {
             display: flex;
             justify-content: center;
@@ -148,8 +149,9 @@
 
         .fh5co-nav .menu-2 ul li {
             margin: 0 10px;
-            display: inline-block; /* Ensure list items are inline */
+            display: inline-block;
         }
+
         #fh5co-logo img {
             max-width: 60%;
             height: auto;
@@ -165,10 +167,74 @@
         }
 
 
+
+
+
+
+        /* Sidebar se muestra como una columna fija en pantallas grandes */
+        #sidebar {
+            width: 200px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: #f8f9fa;
+            z-index: 1000;
+            transition: left 0.3s ease;
+            display: block;
+        }
+
+        /* Cuando se activa, el sidebar se muestra */
+        #sidebar.active {
+            left: 0;
+        }
+
+        /* Ajuste del contenido cuando el sidebar está activo */
+        #page-content-wrapper {
+            flex-grow: 1;
+            padding: 20px;
+            margin-left: 200px;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Cuando el sidebar está oculto */
+        #page-content-wrapper.sidebar-closed {
+            margin-left: 0;
+        }
+
+        /* Botón de menú hamburguesa */
+        #menu-toggle {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1100;
+            display: none; /* Oculto por defecto */
+        }
+
+        /* Mostrar el botón de menú en dispositivos móviles */
+        @media (max-width: 767px) {
+            #menu-toggle {
+                display: block;
+            }
+
+            #sidebar {
+                width: 100%; /* Sidebar toma todo el ancho de la pantalla */
+                left: -100%;
+            }
+
+            #sidebar.active {
+                left: 0;
+            }
+
+            #page-content-wrapper {
+                margin-left: 0;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="fh5co-loader"></div>
 
 <div id="page">
     <nav class="fh5co-nav" role="navigation">
@@ -211,51 +277,61 @@
         </div>
     </nav>
 
+    <!-- Botón para abrir/cerrar el menú -->
+    <div id="menu-toggle">&#9776;</div>
 
-    <div id="wrapper">
-        <!-- Sidebar -->
-        <nav id="sidebar" class="bg-light border-right sidebar">
-            <div class="sidebar-header">
-                <h3>Admin Panel</h3>
-            </div>
-            <ul class="list-unstyled components">
-                <li>
-                    <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action">Dashboard</a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin_products') }}" class="list-group-item list-group-item-action">Available Products</a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action">Orders</a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin_customers') }}" class="list-group-item list-group-item-action">Customers</a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin_reports') }}" class="list-group-item list-group-item-action">Reports</a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin_settings') }}" class="list-group-item list-group-item-action">Settings</a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin_categorias') }}" class="list-group-item list-group-item-action">Categories</a>
-                </li>
-                <li>
-                    <a href="{{ url_for('admin_usuarios') }}" class="list-group-item list-group-item-action">View All Users</a>
-                </li>
-                <li>
-                    <a href="{{ url_for('presuapp') }}" class="list-group-item list-group-item-action">Presuapp</a>
-                </li>
-                <li>
-                    <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action">Logout</a>
-                </li>
-            </ul>
-        </nav>
-        <!-- /#sidebar-wrapper -->
+        <div id="wrapper">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="bg-light border-right sidebar">
+                <div class="sidebar-header">
+                    <h3>Admin Panel</h3>
+                </div>
+                <ul class="list-unstyled components">
+                    <li>
+                        <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action">Dashboard</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_products') }}" class="list-group-item list-group-item-action">Available Products</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_orders') }}" class="list-group-item list-group-item-action">Orders</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_customers') }}" class="list-group-item list-group-item-action">Customers</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_reports') }}" class="list-group-item list-group-item-action">Reports</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_settings') }}" class="list-group-item list-group-item-action">Settings</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_categorias') }}" class="list-group-item list-group-item-action">Categories</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_usuarios') }}" class="list-group-item list-group-item-action">View All Users</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('presuapp') }}" class="list-group-item list-group-item-action">Presuapp</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action">Logout</a>
+                    </li>
+                </ul>
+            </nav>
+            <!-- /#sidebar-wrapper -->
 
-        <!-- Page Content -->
-        <div id="page-content-wrapper">
+        <!-- Contenido de la página -->
+        <div id="page-content-wrapper sidebar-closed">
             <div class="container mt-5">
+                <div class="message-flash">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% set category, message = messages[-1] %}  <!-- Obtener el último mensaje -->
+                            <p class="flash-message-text {{ category }}">{{ message }}</p>
+                        {% endif %}
+                    {% endwith %}
+                </div>
                 {% block content %}
                 {% endblock %}
             </div>
@@ -280,6 +356,16 @@
     <script src="{{ url_for('static', filename='js/jquery.flexslider-min.js') }}"></script>
     <!-- Main -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <script>
+        $(document).ready(function () {
+            // Función para abrir/cerrar el menú lateral
+            $('#menu-toggle').on('click', function () {
+                $('#sidebar').toggleClass('active');
+                $('#page-content-wrapper').toggleClass('sidebar-closed');
+            });
+        });
+    </script>
 
     <script>
     $(document).ready(function(){
