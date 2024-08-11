@@ -8,10 +8,11 @@
             <table class="table table-bordered">
                 <thead class="thead-light">
                     <tr>
+                        <th>Imagen</th>
                         <th>Producto</th>
                         <th>Cantidad</th>
                         <th>Precio</th>
-                        <th>Total</th>
+                        <th>Subtotal</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -26,6 +27,9 @@
                 <tbody>
                     {% for item in items %}
                     <tr>
+                        <td>
+                            <img src="{{ url_for('static', filename='uploads/' ~ item.producto.imagenes[0].url) }}" alt="{{ item.producto.nombre }}" class="img-thumbnail" style="max-width: 100px;">
+                        </td>
                         <td>{{ item.producto.nombre }}</td>
                         <td>
                             <form action="{{ url_for('actualizar_carrito') }}" method="POST" class="d-flex align-items-center">
@@ -54,7 +58,7 @@
                     </tr>
                     {% endfor %}
                     <tr>
-                        <td colspan="3" class="text-right"><strong>Total del Pedido:</strong></td>
+                        <td colspan="4" class="text-right"><strong>Total del Pedido:</strong></td>
                         <td colspan="2"><strong>{{ total }}€</strong></td>
                     </tr>
                 </tbody>

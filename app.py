@@ -35,7 +35,9 @@ app.config.from_object('config.Config')
 
 
 app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static/uploads')
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'glb'}
+app.config['MODEL_UPLOAD_FOLDER'] = os.path.join(app.static_folder, 'models')
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'glb', 'stl'}
 app.config['MAX_CONTENT_PATH'] = 16 * 1024 * 1024  # 16 MB limit
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://sammy:password@localhost/tienda_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -114,6 +116,7 @@ class Producto(db.Model):
     precio = db.Column(db.Float, nullable=False)
     stock = db.Column(db.Integer, nullable=False)
     categoria_id = db.Column(db.Integer, db.ForeignKey('categoria.id'), nullable=False)
+    modelo_3d = db.Column(db.String(255), nullable=True)
     ordenes = db.relationship('OrdenProducto', backref='producto', lazy=True)
     imagenes = db.relationship('Imagen', backref='producto', lazy=True, cascade="all, delete-orphan")
     valoraciones = db.relationship('Valoracion', backref='producto_valoraciones', lazy=True)
@@ -458,25 +461,27 @@ def checkout():
     if request.method == 'POST':
         direccion_envio_id = request.form.get('direccion_envio')
         metodo_pago = request.form.get('metodo_pago')
+        tipo_entrega = request.form.get('tipo_entrega')  # Recoger en almacén o Envío
 
-        # Validar si se selecciona una dirección existente o se crea una nueva
-        if direccion_envio_id == 'nueva':
-            nueva_direccion = Direccion(
-                nombre=request.form['nombre_direccion'],
-                direccion=request.form['direccion'],
-                ciudad=request.form['ciudad'],
-                provincia=request.form['provincia'],
-                codigo_postal=request.form['codigo_postal'],
-                pais=request.form['pais'],
-                usuario_id=usuario_id
-            )
-            db.session.add(nueva_direccion)
-            db.session.flush()
-            direccion_envio_id = nueva_direccion.id
-            db.session.commit()  # Confirmar la nueva dirección en la base de datos
-        elif not direccion_envio_id or not Direccion.query.filter_by(id=direccion_envio_id, usuario_id=usuario_id).first():
-            flash('Por favor seleccione una dirección válida o añada una nueva.', 'danger')
-            return redirect(url_for('checkout'))
+        # Validar si se selecciona una dirección existente o se crea una nueva (para envío)
+        if tipo_entrega == 'envio':
+            if direccion_envio_id == 'nueva':
+                nueva_direccion = Direccion(
+                    nombre=request.form['nombre_direccion'],
+                    direccion=request.form['direccion'],
+                    ciudad=request.form['ciudad'],
+                    provincia=request.form['provincia'],
+                    codigo_postal=request.form['codigo_postal'],
+                    pais=request.form['pais'],
+                    usuario_id=usuario_id
+                )
+                db.session.add(nueva_direccion)
+                db.session.flush()
+                direccion_envio_id = nueva_direccion.id
+                db.session.commit()  # Confirmar la nueva dirección en la base de datos
+            elif not direccion_envio_id or not Direccion.query.filter_by(id=direccion_envio_id, usuario_id=usuario_id).first():
+                flash('Por favor seleccione una dirección válida o añada una nueva.', 'danger')
+                return redirect(url_for('checkout'))
 
         if not metodo_pago:
             flash('Por favor seleccione un método de pago.', 'danger')
@@ -485,12 +490,20 @@ def checkout():
         # Calcular el total del pedido
         total_pedido = sum(item.cantidad * item.producto.precio for item in carrito.items)
 
+        # Calcular los gastos de envío si corresponde
+        gastos_envio = 0
+        if tipo_entrega == 'envio':
+            gastos_envio = 5.99  # Ejemplo de tarifa fija de envío
+
+        # Calcular el total a pagar
+        total_a_pagar = total_pedido + gastos_envio
+
         # Redirigir a la pasarela de pago de Redsys
         order_id = f'{uuid.uuid4().hex[:6]}'  # Generar un identificador único para la orden
 
         # Preparar los datos para la petición al TPV
         merchant_parameters = {
-            'DS_MERCHANT_AMOUNT': str(int(float(total_pedido) * 100)),
+            'DS_MERCHANT_AMOUNT': str(int(float(total_a_pagar) * 100)),
             'DS_MERCHANT_ORDER': order_id,
             'DS_MERCHANT_MERCHANTCODE': app.config['TPV_MERCHANT_CODE'],
             'DS_MERCHANT_CURRENCY': app.config['TPV_CURRENCY'],
@@ -510,15 +523,20 @@ def checkout():
             'usuario_id': usuario_id,
             'direccion_envio_id': direccion_envio_id,
             'metodo_pago': metodo_pago,
-            'total': total_pedido,
-            'order_id': order_id
+            'total': total_a_pagar,  # Se usa el total a pagar con los gastos de envío incluidos
+            'order_id': order_id,
+            'tipo_entrega': tipo_entrega
         }
 
         return render_template('tpv_form.html', merchant_parameters=merchant_parameters_base64, signature=signature)
 
     direcciones = Direccion.query.filter_by(usuario_id=usuario_id).all()
     carrito_items = CarritoItem.query.filter_by(carrito_id=carrito.id).all()
-    return render_template('checkout.html', title='Finalizar Compra', carrito_items=carrito_items, direcciones=direcciones, user=current_user)
+    total_pedido = sum(item.cantidad * item.producto.precio for item in carrito_items)
+    gastos_envio = 5.99  # Tarifa fija de envío (por defecto, esto podría cambiar según el cálculo dinámico)
+    total_a_pagar = total_pedido + gastos_envio
+
+    return render_template('checkout.html', title='Finalizar Compra', carrito_items=carrito_items, direcciones=direcciones, user=current_user, total_pedido=total_pedido, gastos_envio=gastos_envio, total_a_pagar=total_a_pagar)
 
 @app.route('/callback_ok', methods=['GET','POST'])
 @login_required
@@ -888,26 +906,33 @@ def agregar_producto():
         producto = Producto(nombre=nombre, descripcion=descripcion, precio=precio, stock=stock, categoria_id=categoria_id)
         db.session.add(producto)
         db.session.commit()
-        
+
         for especificacion in especificaciones:
             nueva_especificacion = Especificacion(descripcion=especificacion, producto_id=producto.id)
             db.session.add(nueva_especificacion)
         
         # Guardar la imagen
         if 'imagen' not in request.files:
-            flash('No file part')
+            flash('No se ha seleccionado ninguna imagen.', 'danger')
             return redirect(request.url)
         file = request.files['imagen']
         if file.filename == '':
-            flash('No selected file')
+            flash('No se ha seleccionado ninguna imagen.', 'danger')
             return redirect(request.url)
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             imagen = Imagen(url=filename, producto_id=producto.id)
             db.session.add(imagen)
-            db.session.commit()
-        
+
+        # Guardar el modelo 3D
+        if 'modelo_3d' in request.files:
+            modelo_file = request.files['modelo_3d']
+            if modelo_file.filename != '' and allowed_file(modelo_file.filename):  # Reutiliza allowed_file si aplica
+                modelo_filename = secure_filename(modelo_file.filename)
+                modelo_file.save(os.path.join(app.config['MODEL_UPLOAD_FOLDER'], modelo_filename))
+                producto.modelo_3d = modelo_filename  # Guardar la ruta relativa
+
         db.session.commit()
         flash('Producto agregado con éxito', 'success')
         return redirect(url_for('admin_products'))
@@ -946,6 +971,14 @@ def editar_producto(producto_id):
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 imagen = Imagen(url=filename, producto_id=producto.id)
                 db.session.add(imagen)
+        
+        # Guardar el modelo 3D
+        if 'modelo_3d' in request.files:
+            modelo_file = request.files['modelo_3d']
+            if modelo_file.filename != '' and allowed_file(modelo_file.filename):  # Reutiliza allowed_file si aplica
+                modelo_filename = secure_filename(modelo_file.filename)
+                modelo_file.save(os.path.join(app.config['MODEL_UPLOAD_FOLDER'], modelo_filename))
+                producto.modelo_3d = modelo_filename  # Guardar la ruta relativa
         
         db.session.commit()
         flash('Producto editado con éxito', 'success')
@@ -1245,7 +1278,7 @@ def send_email(to_email, subject, html_content):
     msg['From'] = from_email
     msg['To'] = to_email
 
-    part = MIMEText(html_content, 'html')
+    part = MIMEText(html_content, 'html', 'utf-8')
     msg.attach(part)
 
     try:

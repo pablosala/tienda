@@ -44,13 +44,23 @@
             </div>
             <button type="button" class="btn btn-secondary" onclick="agregarEspecificacion()">Agregar otra especificación</button>
         </div>
+        <!-- Campo para imagen -->
         <div class="form-group">
             <label for="imagen">Imagen</label>
             <input type="file" class="form-control-file" id="imagen" name="imagen">
         </div>
+        <!-- Campo para modelo 3D -->
+        <div class="form-group">
+            <label for="modelo_3d">Modelo 3D</label>
+            <input type="file" class="form-control-file" id="modelo_3d" name="modelo_3d">
+            {% if producto.modelo_3d %}
+            <p>Modelo actual: <a href="{{ url_for('static', filename='models/' ~ producto.modelo_3d) }}" target="_blank">{{ producto.modelo_3d }}</a></p>
+            {% endif %}
+        </div>
         <button type="submit" class="btn btn-primary">Guardar Cambios</button>
     </form>
-        <h3>Imágenes del Producto</h3>
+
+    <h3>Imágenes del Producto</h3>
     <div class="row">
         {% for imagen in producto.imagenes %}
         <div class="col-6 col-md-3">
@@ -67,9 +77,6 @@
         {% endfor %}
     </div>
 </div>
-
-</div>
-
 
 <script>
 function agregarEspecificacion() {
