@@ -22,6 +22,12 @@ from Crypto.Cipher import DES3
 import hmac
 import hashlib
 import uuid
+from datetime import datetime
+from pytz import timezone
+from sqlalchemy import func
+import plotly.graph_objs as go
+import plotly
+import json
 
 
 # Configurar la zona horaria de Madrid
@@ -68,6 +74,9 @@ class Usuario(UserMixin, db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
+    apellidos = db.Column(db.String(100), nullable=False)
+    dni = db.Column(db.String(20), unique=True, nullable=False) 
+    telefono = db.Column(db.String(20), nullable=False)  
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='user')
@@ -114,6 +123,9 @@ class Producto(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     descripcion = db.Column(db.Text, nullable=False)
     precio = db.Column(db.Float, nullable=False)
+    precio_original = db.Column(db.Float, nullable=True)  # Campo para guardar el precio original
+    descuento = db.Column(db.Integer, nullable=True, default=0)  # Campo para guardar el porcentaje de descuento
+    fecha_fin_descuento = db.Column(db.DateTime, nullable=True)  # Campo para guardar la fecha y hora de fin del descuento
     stock = db.Column(db.Integer, nullable=False)
     categoria_id = db.Column(db.Integer, db.ForeignKey('categoria.id'), nullable=False)
     modelo_3d = db.Column(db.String(255), nullable=True)
@@ -122,6 +134,20 @@ class Producto(db.Model):
     valoraciones = db.relationship('Valoracion', backref='producto_valoraciones', lazy=True)
     especificaciones = db.relationship('Especificacion', backref='producto', lazy=True, cascade="all, delete-orphan")
 
+    def verificar_descuento_expirado(self):
+        madrid_tz = timezone('Europe/Madrid')
+        now = datetime.now(madrid_tz)
+
+        # Convertir self.fecha_fin_descuento a un datetime aware si no lo es
+        if self.fecha_fin_descuento and self.fecha_fin_descuento.tzinfo is None:
+            self.fecha_fin_descuento = madrid_tz.localize(self.fecha_fin_descuento)
+        
+        if self.fecha_fin_descuento and now > self.fecha_fin_descuento:
+            self.precio = self.precio_original
+            self.precio_original = None
+            self.descuento = 0
+            self.fecha_fin_descuento = None
+            db.session.commit()
 
 class Especificacion(db.Model):
     __tablename__ = 'especificacion'
@@ -185,7 +211,6 @@ class Direccion(db.Model):
     __tablename__ = 'direccion'
     
     id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(120), nullable=False)
     direccion = db.Column(db.String(200), nullable=False)
     ciudad = db.Column(db.String(100), nullable=False)
     provincia = db.Column(db.String(100), nullable=False)
@@ -208,6 +233,10 @@ class Valoracion(db.Model):
     usuario = db.relationship('Usuario', backref='valoraciones_usuario', lazy=True)
     producto = db.relationship('Producto', backref='valoraciones_producto', lazy=True)
 
+
+def obtener_fecha_madrid():
+    madrid = timezone('Europe/Madrid')
+    return datetime.now(madrid)
 
 
 @app.before_request
@@ -356,13 +385,12 @@ def detalles_cuenta():
 @login_required
 def nueva_direccion():
     if request.method == 'POST':
-        nombre = request.form['nombre']
         direccion = request.form['direccion']
         ciudad = request.form['ciudad']
         provincia = request.form['provincia']
         codigo_postal = request.form['codigo_postal']
         pais = request.form['pais']
-        nueva_direccion = Direccion(nombre=nombre, direccion=direccion, ciudad=ciudad, provincia=provincia, codigo_postal=codigo_postal, pais=pais, usuario_id=current_user.id)
+        nueva_direccion = Direccion(direccion=direccion, ciudad=ciudad, provincia=provincia, codigo_postal=codigo_postal, pais=pais, usuario_id=current_user.id)
         db.session.add(nueva_direccion)
         db.session.commit()
         flash('Dirección añadida con éxito!', 'success')
@@ -374,7 +402,6 @@ def nueva_direccion():
 def editar_direccion(direccion_id):
     direccion = Direccion.query.get_or_404(direccion_id)
     if request.method == 'POST':
-        direccion.nombre = request.form['nombre']
         direccion.direccion = request.form['direccion']
         direccion.ciudad = request.form['ciudad']
         direccion.provincia = request.form['provincia']
@@ -459,6 +486,23 @@ def checkout():
         return redirect(url_for('index'))
 
     if request.method == 'POST':
+        # Recoger y validar los nuevos campos del usuario
+        nombre = request.form.get('nombre')
+        apellidos = request.form.get('apellidos')
+        dni = request.form.get('dni')
+        telefono = request.form.get('telefono')
+
+        if not all([nombre, apellidos, dni, telefono]):
+            flash('Por favor, complete todos los campos personales.', 'danger')
+            return redirect(url_for('checkout'))
+
+        # Actualizar la información del usuario
+        current_user.nombre = nombre
+        current_user.apellidos = apellidos
+        current_user.dni = dni
+        current_user.telefono = telefono
+        db.session.commit()
+
         direccion_envio_id = request.form.get('direccion_envio')
         metodo_pago = request.form.get('metodo_pago')
         tipo_entrega = request.form.get('tipo_entrega')  # Recoger en almacén o Envío
@@ -467,7 +511,6 @@ def checkout():
         if tipo_entrega == 'envio':
             if direccion_envio_id == 'nueva':
                 nueva_direccion = Direccion(
-                    nombre=request.form['nombre_direccion'],
                     direccion=request.form['direccion'],
                     ciudad=request.form['ciudad'],
                     provincia=request.form['provincia'],
@@ -634,9 +677,28 @@ def category_products(category_id):
     return render_template('category_products.html', categoria=categoria, productos=productos)
 
 
+from datetime import datetime
+from pytz import timezone
+
 @app.route('/producto/<int:producto_id>', methods=['GET', 'POST'])
 def producto_detalle(producto_id):
     producto = Producto.query.get_or_404(producto_id)
+    
+    # Convertir datetime.now() a un objeto datetime aware
+    madrid_tz = timezone('Europe/Madrid')
+    now = datetime.now(madrid_tz)
+    
+    # Convertir fecha_fin_descuento a un datetime aware si no lo es
+    if producto.fecha_fin_descuento and producto.fecha_fin_descuento.tzinfo is None:
+        producto.fecha_fin_descuento = madrid_tz.localize(producto.fecha_fin_descuento)
+    
+    # Verificar si el descuento ha expirado
+    if producto.fecha_fin_descuento and now > producto.fecha_fin_descuento:
+        producto.precio = producto.precio_original
+        producto.precio_original = None
+        producto.descuento = 0
+        producto.fecha_fin_descuento = None
+        db.session.commit()  # Guardar cambios en la base de datos
     
     ha_comprado = []
     if current_user.is_authenticated:
@@ -674,15 +736,13 @@ def producto_detalle(producto_id):
     return render_template('single.html', producto=producto, ha_comprado=ha_comprado, especificaciones=especificaciones)
 
 
-@app.route('/agregar_carrito/<int:producto_id>', methods=['POST'])
+@app.route('/agregar_carrito/<int:producto_id>', methods=['GET','POST'])
 @login_required
 def agregar_carrito(producto_id):
     producto = Producto.query.get_or_404(producto_id)
-    cantidad = int(request.form['cantidad'])
-
-    if producto.stock < cantidad:
-        flash(f'No hay suficiente stock disponible para {producto.nombre}.', 'danger')
-        return redirect(url_for('product_detail', producto_id=producto_id))
+    
+    # Establecer la cantidad en 1 si no se especifica en el formulario
+    cantidad = int(request.form.get('cantidad', 1))
 
     carrito = Carrito.query.filter_by(usuario_id=current_user.id).first()
     if not carrito:
@@ -691,18 +751,29 @@ def agregar_carrito(producto_id):
         db.session.commit()
 
     item = CarritoItem.query.filter_by(carrito_id=carrito.id, producto_id=producto_id).first()
+
+    # Si el producto ya está en el carrito
     if item:
+        # Verificar si la cantidad total después de agregar supera el stock
         if item.cantidad + cantidad > producto.stock:
-            flash(f'No puedes añadir más de {producto.stock - item.cantidad} unidades de {producto.nombre} al carrito.', 'danger')
-            return redirect(url_for('product_detail', producto_id=producto_id))
+            flash(f'Ya has añadido la cantidad máxima disponible de {producto.nombre}.', 'danger')
+            return redirect(request.referrer)
         item.cantidad += cantidad
     else:
+        # Verificar si la cantidad solicitada supera el stock disponible
+        if cantidad > producto.stock:
+            flash(f'No hay suficiente stock disponible para {producto.nombre}.', 'danger')
+            return redirect(request.referrer)
         item = CarritoItem(carrito_id=carrito.id, producto_id=producto_id, cantidad=cantidad)
         db.session.add(item)
 
     db.session.commit()
     flash(f'{producto.nombre} agregado al carrito', 'success')
-    return redirect(url_for('index'))
+
+    # Redirigir de vuelta a la página desde donde se realizó la solicitud
+    return redirect(request.referrer)
+
+
 
 @app.route('/carrito')
 @login_required
@@ -876,8 +947,83 @@ def admin():
 def admin_dashboard():
     if current_user.role != 'admin':
         return redirect(url_for('index'))
-    return render_template('admin_dashboard.html')
+    # Total de Ventas
+    total_ventas = db.session.query(func.sum(Orden.total)).scalar() or 0
 
+    # Número de Clientes
+    total_clientes = db.session.query(func.count(Usuario.id)).scalar()
+
+    # Productos más vendidos
+    mas_vendidos = db.session.query(
+        Producto.nombre, 
+        func.sum(OrdenProducto.cantidad).label('total_vendido')
+    ).join(OrdenProducto.producto).group_by(Producto.id).order_by(func.sum(OrdenProducto.cantidad).desc()).limit(5).all()
+
+    # Productos menos vendidos
+    menos_vendidos = db.session.query(
+        Producto.nombre, 
+        func.sum(OrdenProducto.cantidad).label('total_vendido')
+    ).join(OrdenProducto.producto).group_by(Producto.id).order_by(func.sum(OrdenProducto.cantidad)).limit(5).all()
+
+    # Productos más vistos (esto dependerá de cómo almacenes las visitas)
+    mas_vistos = db.session.query(
+        Producto.nombre,
+        func.count().label('total_vistos')
+    ).group_by(Producto.id).order_by(func.count().desc()).limit(5).all()
+
+    # Agrupar y sumar ventas por mes utilizando MySQL DATE_FORMAT
+    ventas_por_mes = db.session.query(
+        func.DATE_FORMAT(Orden.fecha, '%Y-%m').label('mes'),
+        func.sum(Orden.total).label('total')
+    ).group_by('mes').order_by('mes').all()
+
+    # Generación de gráficos
+    graficas = generar_graficas(mas_vendidos, menos_vendidos, ventas_por_mes, mas_vistos)
+
+    return render_template(
+        'admin_dashboard.html', 
+        total_ventas=total_ventas,
+        total_clientes=total_clientes,
+        mas_vendidos=mas_vendidos,
+        menos_vendidos=menos_vendidos,
+        mas_vistos=mas_vistos,
+        graficas=graficas
+    )
+
+def generar_graficas(mas_vendidos, menos_vendidos, ventas_por_mes, mas_vistos):
+    # Gráfica de Productos Más Vendidos
+    productos = [producto[0] for producto in mas_vendidos]
+    ventas = [producto[1] for producto in mas_vendidos]
+    fig_mas_vendidos = go.Figure([go.Bar(x=productos, y=ventas)])
+    fig_mas_vendidos.update_layout(title='Productos Más Vendidos')
+
+    # Gráfica de Productos Menos Vendidos
+    productos = [producto[0] for producto in menos_vendidos]
+    ventas = [producto[1] for producto in menos_vendidos]
+    fig_menos_vendidos = go.Figure([go.Bar(x=productos, y=ventas)])
+    fig_menos_vendidos.update_layout(title='Productos Menos Vendidos')
+
+    # Gráfica de Evolución de Ventas
+    meses = [venta[0] for venta in ventas_por_mes]
+    total_ventas = [venta[1] for venta in ventas_por_mes]
+    fig_ventas_mes = go.Figure([go.Scatter(x=meses, y=total_ventas, mode='lines+markers')])
+    fig_ventas_mes.update_layout(title='Evolución de Ventas por Mes')
+
+    # Gráfica de Productos Más Vistos
+    productos = [producto[0] for producto in mas_vistos]
+    vistos = [producto[1] for producto in mas_vistos]
+    fig_mas_vistos = go.Figure([go.Bar(x=productos, y=vistos)])
+    fig_mas_vistos.update_layout(title='Productos Más Vistos')
+
+    # Convertir las gráficas a JSON para renderizar en el template
+    graficas = {
+        'mas_vendidos': json.dumps(fig_mas_vendidos, cls=plotly.utils.PlotlyJSONEncoder),
+        'menos_vendidos': json.dumps(fig_menos_vendidos, cls=plotly.utils.PlotlyJSONEncoder),
+        'ventas_mes': json.dumps(fig_ventas_mes, cls=plotly.utils.PlotlyJSONEncoder),
+        'mas_vistos': json.dumps(fig_mas_vistos, cls=plotly.utils.PlotlyJSONEncoder),
+    }
+
+    return graficas
 
 @app.route('/admin/products')
 @login_required
@@ -932,6 +1078,24 @@ def agregar_producto():
                 modelo_filename = secure_filename(modelo_file.filename)
                 modelo_file.save(os.path.join(app.config['MODEL_UPLOAD_FOLDER'], modelo_filename))
                 producto.modelo_3d = modelo_filename  # Guardar la ruta relativa
+        
+        # Agregar descuento y fecha de fin de descuento
+        descuento = request.form.get('descuento')
+        if descuento and int(descuento) > 0:
+            producto.descuento = int(descuento)
+            producto.precio_original = precio  # Guardar el precio original antes del descuento
+            producto.precio = precio * (1 - (producto.descuento / 100))
+
+            # Establecer la fecha de fin de descuento con la zona horaria de Madrid
+            fecha_fin_descuento_str = request.form.get('fecha_fin_descuento')
+            if fecha_fin_descuento_str:
+                madrid = timezone('Europe/Madrid')
+                fecha_fin_descuento = datetime.strptime(fecha_fin_descuento_str, '%Y-%m-%dT%H:%M')
+                producto.fecha_fin_descuento = madrid.localize(fecha_fin_descuento)
+        else:
+            producto.descuento = 0
+            producto.precio_original = None
+            producto.fecha_fin_descuento = None
 
         db.session.commit()
         flash('Producto agregado con éxito', 'success')
@@ -941,6 +1105,8 @@ def agregar_producto():
     return render_template('agregar_producto.html', categorias=categorias)
 
 
+
+
 @app.route('/admin/editar_producto/<int:producto_id>', methods=['GET', 'POST'])
 @login_required
 def editar_producto(producto_id):
@@ -948,6 +1114,7 @@ def editar_producto(producto_id):
         return redirect(url_for('index'))
     
     producto = Producto.query.get_or_404(producto_id)
+    producto.verificar_descuento_expirado()
 
     if request.method == 'POST':
         producto.nombre = request.form['nombre']
@@ -980,6 +1147,26 @@ def editar_producto(producto_id):
                 modelo_file.save(os.path.join(app.config['MODEL_UPLOAD_FOLDER'], modelo_filename))
                 producto.modelo_3d = modelo_filename  # Guardar la ruta relativa
         
+        # Actualizar el descuento y la fecha de fin de descuento
+        descuento = request.form.get('descuento')
+        if descuento and int(descuento) > 0:
+            producto.descuento = int(descuento)
+            producto.precio_original = float(request.form['precio_original']) if request.form.get('precio_original') else producto.precio
+            producto.precio = producto.precio_original * (1 - (producto.descuento / 100))
+
+            # Establecer la fecha de fin de descuento con la zona horaria de Madrid
+            fecha_fin_descuento_str = request.form.get('fecha_fin_descuento')
+            if fecha_fin_descuento_str:
+                madrid = timezone('Europe/Madrid')
+                fecha_fin_descuento = datetime.strptime(fecha_fin_descuento_str, '%Y-%m-%dT%H:%M')
+                producto.fecha_fin_descuento = madrid.localize(fecha_fin_descuento)
+        else:
+            # Si no hay descuento, resetear los valores
+            producto.descuento = 0
+            producto.precio = producto.precio_original if producto.precio_original else producto.precio
+            producto.precio_original = None
+            producto.fecha_fin_descuento = None
+
         db.session.commit()
         flash('Producto editado con éxito', 'success')
         return redirect(url_for('admin_products'))
@@ -988,6 +1175,8 @@ def editar_producto(producto_id):
     categorias = Categoria.query.all()
     especificaciones = Especificacion.query.filter_by(producto_id=producto.id).all()
     return render_template('editar_producto.html', producto=producto, categorias=categorias, especificaciones=especificaciones, imagenes=imagenes)
+
+
 
 @app.route('/admin/eliminar_especificacion/<int:especificacion_id>', methods=['POST'])
 @login_required
@@ -1027,7 +1216,6 @@ def eliminar_imagen(imagen_id):
         flash(f'Error al eliminar la imagen: {str(e)}', 'danger')
     
     return redirect(url_for('editar_producto', producto_id=producto_id))
-
 
 
 @app.route('/admin/eliminar_producto/<int:producto_id>', methods=['POST'])

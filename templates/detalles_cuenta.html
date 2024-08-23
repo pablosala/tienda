@@ -75,7 +75,7 @@ Detalles de la Cuenta
                 {% for direccion in direcciones %}
                     <div class="card mb-3">
                         <div class="card-body">
-                            <h5 class="card-title">{{ direccion.nombre }}</h5>
+                            <h5 class="card-title">{{ direccion.direccion }}</h5>
                             <p class="card-text">{{ direccion.direccion }}, {{ direccion.ciudad }}, {{ direccion.provincia }}, {{ direccion.codigo_postal }}, {{ direccion.pais }}</p>
                             <a href="{{ url_for('editar_direccion', direccion_id=direccion.id) }}" class="btn btn-secondary">Editar</a>
                             <form action="{{ url_for('eliminar_direccion', direccion_id=direccion.id) }}" method="post" class="d-inline">

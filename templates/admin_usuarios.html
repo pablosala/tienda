@@ -2,15 +2,15 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h2>All Users</h2>
+    <h2>Usuarios</h2>
     <table class="table table-striped">
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Name</th>
+                <th>Nombre</th>
                 <th>Email</th>
-                <th>Role</th>
-                <th>Actions</th>
+                <th>Rol</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -21,9 +21,9 @@
                 <td>{{ usuario.email }}</td>
                 <td>{{ usuario.role }}</td>
                 <td>
-                    <a href="{{ url_for('editar_usuario', usuario_id=usuario.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                    <a href="{{ url_for('editar_usuario', usuario_id=usuario.id) }}" class="btn btn-sm btn-primary">Editar</a>
                     <form action="{{ url_for('eliminar_usuario', usuario_id=usuario.id) }}" method="POST" style="display:inline;">
-                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
                     </form>
                 </td>
             </tr>

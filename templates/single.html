@@ -3,7 +3,7 @@
 {% block content %}
 <style>
     .header-line {
-        border-top: 2px solid #d1c286; /* Línea marrón */
+        border-top: 2px solid #d1c286;
         margin-top: 20px;
     }
     .espacio {
@@ -25,19 +25,59 @@
     }
     .tresd-container {
         width: 100%;
-        max-width: 600px; /* Limitar el ancho máximo */
+        max-width: 600px;
         height: 500px;
         margin: 80px auto;
         display: flex;
         justify-content: center;
         align-items: center;
-        border: 1px solid #ccc; /* Opcional: agregar un borde para visualizar mejor el contenedor */
-        border-radius: 10px; /* Opcional: esquinas redondeadas */
+        border: 1px solid #ccc;
+        border-radius: 10px;
     }
     canvas {
         display: block;
         width: 100%;
         height: 100%;
+    }
+    .price-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+        margin-top: 10px;
+    }
+    .discounted-price {
+        color: #e74c3c;
+        margin-right: 10px;
+    }
+    .original-price {
+        text-decoration: line-through;
+        color: #999;
+        margin-right: 10px;
+        font-size: 20px;
+    }
+    .discount-badge {
+        background-color: #e74c3c;
+        color: white;
+        padding: 5px 10px;
+        font-size: 16px;
+        font-weight: bold;
+        border-radius: 5px;
+    }
+    #countdown {
+        font-size: 18px;
+        color: #e74c3c;
+        font-weight: bold;
+        margin-top: 10px;
+    }
+    .single-image-container img {
+        width: 100%;
+        max-width: 600px;
+        height: auto;
+        max-height: 500px;
+        display: block;
+        margin: 0 auto;
     }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -47,8 +87,7 @@
 <div class="container">
     <div class="row header-line">
         <div class="col-md-10 col-md-offset-1 animate-box espacio">
-            {% if producto.modelo_3d and producto.imagenes|length > 1 %}
-            <!-- Botón para alternar entre modelo 3D y carrusel -->
+            {% if producto.modelo_3d and producto.imagenes|length > 0 %}
             <div class="text-center">
                 <button id="toggle-view" class="btn btn-primary btn-outline btn-lg">Ver Imágenes</button>
             </div>
@@ -59,14 +98,12 @@
             <div id="carousel-container" style="display: {% if producto.modelo_3d %}none{% else %}block{% endif %};">
                 {% if producto.imagenes|length > 1 %}
                 <div id="carousel-example-generic" class="carousel slide" data-ride="carousel">
-                    <!-- Indicators -->
                     <ol class="carousel-indicators">
                         {% for imagen in producto.imagenes %}
                         <li data-target="#carousel-example-generic" data-slide-to="{{ loop.index0 }}" class="{% if loop.first %}active{% endif %}"></li>
                         {% endfor %}
                     </ol>
 
-                    <!-- Wrapper for slides -->
                     <div class="carousel-inner" role="listbox">
                         {% for imagen in producto.imagenes %}
                         <div class="item {% if loop.first %}active{% endif %}">
@@ -75,7 +112,6 @@
                         {% endfor %}
                     </div>
 
-                    <!-- Controls -->
                     <a class="left carousel-control" href="#carousel-example-generic" role="button" data-slide="prev">
                         <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
                         <span class="sr-only">Previous</span>
@@ -86,9 +122,9 @@
                     </a>
                 </div>
                 {% else %}
-                <div class="text-center">
+                <div class="single-image-container text-center">
                     <figure>
-                        <img src="{{ url_for('static', filename='uploads/' ~ producto.imagenes[0].url) }}" alt="{{ producto.nombre }}" class="img-responsive" style="max-width: 100%; height: auto;">
+                        <img src="{{ url_for('static', filename='uploads/' ~ producto.imagenes[0].url) }}" alt="{{ producto.nombre }}">
                     </figure>
                 </div>
                 {% endif %}
@@ -98,7 +134,16 @@
     <div class="row animate-box">
         <div class="col-md-8 col-md-offset-2 text-center fh5co-heading">
             <h2>{{ producto.nombre }}</h2>
+            {% if producto.descuento > 0 %}
+            <div class="price-container">
+                <span class="discounted-price">{{ producto.precio }} €</span>
+                <span class="original-price">{{ producto.precio_original }} €</span>
+                <span class="discount-badge">-{{ producto.descuento }}%</span>
+            </div>
+            <div id="countdown"></div>
+            {% else %}
             <span class="price">{{ producto.precio }} €</span>
+            {% endif %}
             <p>
                 {% if producto.stock > 0 %}
                 <form action="{{ url_for('agregar_carrito', producto_id=producto.id) }}" method="POST">
@@ -111,9 +156,20 @@
                 {% else %}
                 <span class="text-danger">Agotado</span>
                 {% endif %}
+
+                <div class="message-flash">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <p class="flash-message-text {{ category }}">{{ message }}</p>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                </div>
             </p>
         </div>
     </div>
+
     <div class="row">
         <div class="col-md-10 col-md-offset-1">
             <div class="fh5co-tabs animate-box">
@@ -147,14 +203,6 @@
                     <div class="fh5co-tab-content tab-content" data-tab-content="3">
                         <div class="col-md-10 col-md-offset-1">
                             <h3 class="tab-button" data-tab="3">Clientes Satisfechos</h3>
-                            <div class="message-flash">
-                                {% with messages = get_flashed_messages(with_categories=true) %}
-                                    {% if messages %}
-                                        {% set category, message = messages[-1] %}
-                                        <p class="flash-message-text {{ category }}">{{ message }}</p>
-                                    {% endif %}
-                                {% endwith %}
-                            </div>
                             <div class="feed">
                                 {% for valoracion in producto.valoraciones %}
                                 <div class="card mb-3">
@@ -240,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    {% if producto.modelo_3d and producto.imagenes|length > 1 %}
+    {% if producto.modelo_3d and producto.imagenes|length > 0 %}
     toggleViewBtn.addEventListener('click', () => {
         if (modelContainer.style.display === 'none') {
             modelContainer.style.display = 'block';
@@ -312,12 +360,40 @@ document.addEventListener('DOMContentLoaded', function() {
         renderer.render(scene, camera);
     }
 
-    // Precargar el modelo al cargar la página
     initModel();
     modelLoaded = true;
     {% endif %}
+
+    {% if producto.fecha_fin_descuento %}
+    const endDate = new Date("{{ producto.fecha_fin_descuento.isoformat() }}").getTime();
+
+    const countdown = setInterval(function() {
+        const now = new Date().getTime();
+        const timeleft = endDate - now;
+
+        if (timeleft <= 0) {
+            clearInterval(countdown);
+            document.getElementById("countdown").innerHTML = "La oferta ha terminado";
+
+            // Evitar recarga en bucle al hacer una sola recarga
+            if (!localStorage.getItem('offerExpired')) {
+                localStorage.setItem('offerExpired', 'true');
+                window.location.reload();
+            }
+        } else {
+            const days = Math.floor(timeleft / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeleft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeleft % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeleft % (1000 * 60)) / 1000);
+
+            document.getElementById("countdown").innerHTML = days + "d " + hours + "h " +
+                minutes + "m " + seconds + "s ";
+        }
+    }, 1000);
+    {% endif %}
 });
 </script>
+
             </div>
         </div>
     </div>

@@ -2,16 +2,16 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h2>Manage Orders</h2>
+    <h2>Pedidos</h2>
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Date</th>
+                <th>Pedido ID</th>
+                <th>Cliente</th>
+                <th>Fecha</th>
                 <th>Total</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>Estado</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -23,9 +23,9 @@
                 <td>${{ order.total }}</td>
                 <td>{{ order.status }}</td>
                 <td>
-                    <a href="{{ url_for('ver_pedido', order_id=order.id) }}" class="btn btn-primary btn-sm">View</a>
+                    <a href="{{ url_for('ver_pedido', order_id=order.id) }}" class="btn btn-primary btn-sm">Ver</a>
                     <form action="{{ url_for('eliminar_pedido', order_id=order.id) }}" method="post" style="display:inline-block;">
-                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
                     </form>
                 </td>
             </tr>

@@ -2,45 +2,57 @@
 
 {% block content %}
 <div class="container mt-5">
-    <div class="row">
-        <div class="col-md-12">
-            <h2>Admin Dashboard</h2>
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Sales</h5>
-                            <p class="card-text">2500</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Orders</h5>
-                            <p class="card-text">13100</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Products</h5>
-                            <p class="card-text">132700</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Customers</h5>
-                            <p class="card-text">8100</p>
-                        </div>
-                    </div>
+    <h2>Dashboard</h2>
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Total de Ventas</h5>
+                    <p>{{ total_ventas }} €</p>
                 </div>
             </div>
-            <!-- Add more sections as needed -->
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Número de Clientes</h5>
+                    <p>{{ total_clientes }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <h3>Productos Más Vendidos</h3>
+            <div id="grafica_mas_vendidos"></div>
+        </div>
+        <div class="col-md-6">
+            <h3>Productos Menos Vendidos</h3>
+            <div id="grafica_menos_vendidos"></div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h3>Evolución de Ventas por Mes</h3>
+            <div id="grafica_ventas_mes"></div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <h3>Productos Más Vistos</h3>
+            <div id="grafica_mas_vistos"></div>
         </div>
     </div>
 </div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    Plotly.newPlot('grafica_mas_vendidos', {{ graficas.mas_vendidos|safe }});
+    Plotly.newPlot('grafica_menos_vendidos', {{ graficas.menos_vendidos|safe }});
+    Plotly.newPlot('grafica_ventas_mes', {{ graficas.ventas_mes|safe }});
+    Plotly.newPlot('grafica_mas_vistos', {{ graficas.mas_vistos|safe }});
+</script>
 {% endblock %}

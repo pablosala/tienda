@@ -19,7 +19,7 @@
                 <div class="message-flash">
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}
-                            {% set category, message = messages[-1] %}  <!-- Obtener el último mensaje -->
+                            {% set category, message = messages[-1] %}
                             <p class="flash-message-text {{ category }}">{{ message }}</p>
                         {% endif %}
                     {% endwith %}
@@ -47,7 +47,14 @@
                                 </button>
                             </form>
                         </td>
-                        <td>{{ item.producto.precio }}€</td>
+                        <td>
+                            {% if item.producto.descuento > 0 %}
+                                <span class="text-success font-weight-bold">{{ item.producto.precio }}€</span>
+                                <span class="text-muted"><del>{{ item.producto.precio_original }}€</del></span>
+                            {% else %}
+                                <span>{{ item.producto.precio }}€</span>
+                            {% endif %}
+                        </td>
                         <td>{{ item.cantidad * item.producto.precio }}€</td>
                         <td>
                             <form action="{{ url_for('eliminar_del_carrito') }}" method="POST">

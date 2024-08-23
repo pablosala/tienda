@@ -14,8 +14,20 @@
             <textarea class="form-control" id="descripcion" name="descripcion" required>{{ producto.descripcion }}</textarea>
         </div>
         <div class="form-group">
-            <label for="precio">Precio</label>
-            <input type="number" class="form-control" id="precio" name="precio" step="0.01" value="{{ producto.precio }}" required>
+            <label for="precio">Precio Original</label>
+            <input type="number" class="form-control" id="precio" name="precio" step="0.01" value="{{ producto.precio_original if producto.precio_original else producto.precio }}" required>
+        </div>
+        <div class="form-group">
+            <label for="descuento">Descuento (%)</label>
+            <input type="number" class="form-control" id="descuento" name="descuento" min="0" max="100" step="1" value="{{ producto.descuento }}">
+        </div>
+        <div class="form-group">
+            <label>Precio con Descuento</label>
+            <p id="precioConDescuento" class="form-control-static">{{ producto.precio }}</p>
+        </div>
+        <div class="form-group">
+            <label for="fecha_fin_descuento">Fecha de Fin del Descuento</label>
+            <input type="datetime-local" class="form-control" id="fecha_fin_descuento" name="fecha_fin_descuento" value="{{ producto.fecha_fin_descuento.strftime('%Y-%m-%dT%H:%M:%S') if producto.fecha_fin_descuento else '' }}">
         </div>
         <div class="form-group">
             <label for="stock">Stock</label>
@@ -79,6 +91,18 @@
 </div>
 
 <script>
+function calcularPrecioConDescuento() {
+    const precio = parseFloat(document.getElementById('precio').value) || 0;
+    const descuento = parseFloat(document.getElementById('descuento').value) || 0;
+    const precioConDescuento = precio * (1 - (descuento / 100));
+    document.getElementById('precioConDescuento').innerText = precioConDescuento.toFixed(2) + " €";
+}
+
+document.getElementById('precio').addEventListener('input', calcularPrecioConDescuento);
+document.getElementById('descuento').addEventListener('input', calcularPrecioConDescuento);
+
+calcularPrecioConDescuento(); // Inicializar al cargar la página
+
 function agregarEspecificacion() {
     var container = document.getElementById('especificaciones-container');
     var inputGroup = document.createElement('div');

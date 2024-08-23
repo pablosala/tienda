@@ -9,10 +9,6 @@ Editar Dirección
     <h2>Editar Dirección</h2>
     <form method="POST" action="{{ url_for('editar_direccion', direccion_id=direccion.id) }}">
         <div class="form-group">
-            <label for="nombre">Nombre</label>
-            <input type="text" class="form-control" id="nombre" name="nombre" value="{{ direccion.nombre }}" required>
-        </div>
-        <div class="form-group">
             <label for="direccion">Dirección</label>
             <input type="text" class="form-control" id="direccion" name="direccion" value="{{ direccion.direccion }}" required>
         </div>
@@ -22,7 +18,58 @@ Editar Dirección
         </div>
         <div class="form-group">
             <label for="provincia">Provincia</label>
-            <input type="text" class="form-control" id="provincia" name="provincia" value="{{ direccion.provincia }}" required>
+            <select class="form-control" id="provincia" name="provincia" required>
+                <option value="" disabled>Selecciona tu Provincia</option>
+                <option value="Álava" {% if direccion.provincia == 'Álava' %}selected{% endif %}>Álava</option>
+                <option value="Albacete" {% if direccion.provincia == 'Albacete' %}selected{% endif %}>Albacete</option>
+                <option value="Alicante" {% if direccion.provincia == 'Alicante' %}selected{% endif %}>Alicante</option>
+                <option value="Almería" {% if direccion.provincia == 'Almería' %}selected{% endif %}>Almería</option>
+                <option value="Asturias" {% if direccion.provincia == 'Asturias' %}selected{% endif %}>Asturias</option>
+                <option value="Ávila" {% if direccion.provincia == 'Ávila' %}selected{% endif %}>Ávila</option>
+                <option value="Badajoz" {% if direccion.provincia == 'Badajoz' %}selected{% endif %}>Badajoz</option>
+                <option value="Barcelona" {% if direccion.provincia == 'Barcelona' %}selected{% endif %}>Barcelona</option>
+                <option value="Burgos" {% if direccion.provincia == 'Burgos' %}selected{% endif %}>Burgos</option>
+                <option value="Cáceres" {% if direccion.provincia == 'Cáceres' %}selected{% endif %}>Cáceres</option>
+                <option value="Cádiz" {% if direccion.provincia == 'Cádiz' %}selected{% endif %}>Cádiz</option>
+                <option value="Cantabria" {% if direccion.provincia == 'Cantabria' %}selected{% endif %}>Cantabria</option>
+                <option value="Castellón" {% if direccion.provincia == 'Castellón' %}selected{% endif %}>Castellón</option>
+                <option value="Ciudad Real" {% if direccion.provincia == 'Ciudad Real' %}selected{% endif %}>Ciudad Real</option>
+                <option value="Córdoba" {% if direccion.provincia == 'Córdoba' %}selected{% endif %}>Córdoba</option>
+                <option value="Cuenca" {% if direccion.provincia == 'Cuenca' %}selected{% endif %}>Cuenca</option>
+                <option value="Girona" {% if direccion.provincia == 'Girona' %}selected{% endif %}>Girona</option>
+                <option value="Granada" {% if direccion.provincia == 'Granada' %}selected{% endif %}>Granada</option>
+                <option value="Guadalajara" {% if direccion.provincia == 'Guadalajara' %}selected{% endif %}>Guadalajara</option>
+                <option value="Guipúzcoa" {% if direccion.provincia == 'Guipúzcoa' %}selected{% endif %}>Guipúzcoa</option>
+                <option value="Huelva" {% if direccion.provincia == 'Huelva' %}selected{% endif %}>Huelva</option>
+                <option value="Huesca" {% if direccion.provincia == 'Huesca' %}selected{% endif %}>Huesca</option>
+                <option value="Jaén" {% if direccion.provincia == 'Jaén' %}selected{% endif %}>Jaén</option>
+                <option value="La Coruña" {% if direccion.provincia == 'La Coruña' %}selected{% endif %}>La Coruña</option>
+                <option value="La Rioja" {% if direccion.provincia == 'La Rioja' %}selected{% endif %}>La Rioja</option>
+                <option value="Las Palmas" {% if direccion.provincia == 'Las Palmas' %}selected{% endif %}>Las Palmas</option>
+                <option value="León" {% if direccion.provincia == 'León' %}selected{% endif %}>León</option>
+                <option value="Lleida" {% if direccion.provincia == 'Lleida' %}selected{% endif %}>Lleida</option>
+                <option value="Lugo" {% if direccion.provincia == 'Lugo' %}selected{% endif %}>Lugo</option>
+                <option value="Madrid" {% if direccion.provincia == 'Madrid' %}selected{% endif %}>Madrid</option>
+                <option value="Málaga" {% if direccion.provincia == 'Málaga' %}selected{% endif %}>Málaga</option>
+                <option value="Murcia" {% if direccion.provincia == 'Murcia' %}selected{% endif %}>Murcia</option>
+                <option value="Navarra" {% if direccion.provincia == 'Navarra' %}selected{% endif %}>Navarra</option>
+                <option value="Ourense" {% if direccion.provincia == 'Ourense' %}selected{% endif %}>Ourense</option>
+                <option value="Palencia" {% if direccion.provincia == 'Palencia' %}selected{% endif %}>Palencia</option>
+                <option value="Pontevedra" {% if direccion.provincia == 'Pontevedra' %}selected{% endif %}>Pontevedra</option>
+                <option value="Salamanca" {% if direccion.provincia == 'Salamanca' %}selected{% endif %}>Salamanca</option>
+                <option value="Santa Cruz de Tenerife" {% if direccion.provincia == 'Santa Cruz de Tenerife' %}selected{% endif %}>Santa Cruz de Tenerife</option>
+                <option value="Segovia" {% if direccion.provincia == 'Segovia' %}selected{% endif %}>Segovia</option>
+                <option value="Sevilla" {% if direccion.provincia == 'Sevilla' %}selected{% endif %}>Sevilla</option>
+                <option value="Soria" {% if direccion.provincia == 'Soria' %}selected{% endif %}>Soria</option>
+                <option value="Tarragona" {% if direccion.provincia == 'Tarragona' %}selected{% endif %}>Tarragona</option>
+                <option value="Teruel" {% if direccion.provincia == 'Teruel' %}selected{% endif %}>Teruel</option>
+                <option value="Toledo" {% if direccion.provincia == 'Toledo' %}selected{% endif %}>Toledo</option>
+                <option value="Valencia" {% if direccion.provincia == 'Valencia' %}selected{% endif %}>Valencia</option>
+                <option value="Valladolid" {% if direccion.provincia == 'Valladolid' %}selected{% endif %}>Valladolid</option>
+                <option value="Vizcaya" {% if direccion.provincia == 'Vizcaya' %}selected{% endif %}>Vizcaya</option>
+                <option value="Zamora" {% if direccion.provincia == 'Zamora' %}selected{% endif %}>Zamora</option>
+                <option value="Zaragoza" {% if direccion.provincia == 'Zaragoza' %}selected{% endif %}>Zaragoza</option>
+            </select>
         </div>
         <div class="form-group">
             <label for="codigo_postal">Código Postal</label>
@@ -30,7 +77,7 @@ Editar Dirección
         </div>
         <div class="form-group">
             <label for="pais">País</label>
-            <input type="text" class="form-control" id="pais" name="pais" value="{{ direccion.pais }}" required>
+            <input type="text" class="form-control" id="pais" name="pais" value="España" readonly required>
         </div>
         <button type="submit" class="btn btn-primary">Actualizar</button>
     </form>
