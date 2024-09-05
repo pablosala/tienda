@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reenviar Confirmación</title>
+</head>
+<body>
+    <h2>Confirma tu Correo Electrónico</h2>
+    <p>No has confirmado tu correo electrónico. Por favor, revisa tu bandeja de entrada o la carpeta de spam.</p>
+    <p>Si no recibiste el correo de confirmación, puedes solicitar que te lo reenviemos.</p>
+    
+    <form method="POST" action="{{ url_for('resend_confirmation') }}">
+        <input type="hidden" name="email" value="{{ email }}">
+        <button type="submit">Reenviar Correo de Confirmación</button>
+    </form>
+</body>
+</html>

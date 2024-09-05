@@ -115,40 +115,93 @@ Tu pedido
             </div>
         </div>
 
-        <!-- Resumen del Pedido -->
-        <h3>Resumen del Pedido</h3>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Imagen</th>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th class="text-right">Subtotal</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in carrito_items %}
-                <tr>
-                    <td>
-                        <img src="{{ url_for('static', filename='uploads/' ~ item.producto.imagenes[0].url) }}" alt="{{ item.producto.nombre }}" class="img-thumbnail" style="max-width: 100px;">
-                    </td>
-                    <td>
-                        {{ item.producto.nombre }}
-                    </td>
-                    <td>
-                        x {{ item.cantidad }}
-                    </td>
-                    <td class="text-right">
-                        {{ item.cantidad * item.producto.precio }}€ (incl. impuestos)
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<!-- Resumen del Pedido -->
+<h3>Resumen del Pedido</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Imagen</th>
+            <th>Producto</th>
+            <th>Detalles de la Personalización</th>
+            <th>Cantidad</th>
+            <th class="text-right">Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in carrito_items %}
+        <tr>
+            <td>
+                <img src="{{ url_for('static', filename='uploads/' ~ item.producto.imagenes[0].url) }}" alt="{{ item.producto.nombre }}" class="img-thumbnail" style="max-width: 100px;">
+            </td>
+            <td>{{ item.producto.nombre }}</td>
+            <td>
+                {% if item.personalizaciones %}
+                    <ul>
+                        {% for personalizacion in item.personalizaciones %}
+                        <li>
+                            <strong>Personalización:</strong>
+                            <ul>
+                                <li>Largo: {{ personalizacion.largo }} mm</li>
+                                <li>Ancho: {{ personalizacion.ancho }} mm</li>
+                                <li>Material: {{ personalizacion.material.nombre }}</li>
+                                {% if item.tipo_lavabo %}
+                                    <li>Tipo de Lavabo: {{ item.tipo_lavabo.nombre }}</li>
+                                {% endif %}
+                                {% if item.faldones %}
+                                    <li>Faldón:
+                                        <ul>
+                                            {% for faldon in item.faldones %}
+                                            <li>Posición: {{ faldon.posicion }}, Medida: {{ faldon.medida }} mm</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </li>
+                                {% endif %}
+                                {% if item.toalleros %}
+                                    <li>Toallero:
+                                        <ul>
+                                            {% for toallero in item.toalleros %}
+                                            <li>Posición: {{ toallero.posicion }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </li>
+                                {% endif %}
+                                {% if item.valvula_logo %}
+                                    <li>Válvula con logo: Sí</li>
+                                {% endif %}
+                                {% if item.agujero_grifo %}
+                                    <li>Agujero para grifo: Sí</li>
+                                {% endif %}
+                            </ul>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <span>No personalizado</span>
+                {% endif %}
+            </td>
+            <td>x {{ item.cantidad }}</td>
+            <td class="text-right">
+                {% if item.personalizaciones %}
+                    {% for personalizacion in item.personalizaciones %}
+                        <span>{{ (item.cantidad * personalizacion.precio_personalizado)|round2 }}€</span>
+                        {% if not loop.last %}<br>{% endif %}
+                    {% endfor %}
+                {% else %}
+                    <span>{{ (item.cantidad * item.producto.precio)|round2 }}€</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+
+
 
         <!-- Totales y Opciones de Entrega -->
         <div class="text-right">
-            <p><strong>Subtotal</strong> {{ total_pedido }}€ (incl. impuestos)</p>
+            <p><strong>Subtotal</strong> {{ total_pedido|round2 }}€ (incl. impuestos)</p>
             <p>
                 <strong>Envío</strong>
                 <br>

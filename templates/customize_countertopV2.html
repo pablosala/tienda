@@ -1,0 +1,504 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; background-color: #ffffff; }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #object-bar {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            padding: 10px 0;
+        }
+        .object-item {
+            width: 100px;
+            height: 50px;
+            margin: 0 10px;
+            background-color: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        button {
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+        #size-controls, #height-controls {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+        }
+        label {
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        input[type="range"] {
+            width: 150px;
+        }
+        #file-input {
+            display: none;
+        }
+    </style>
+    <div id="ui">
+        <button onclick="saveDesign()">Save Design</button>
+        <button onclick="loadDesign()">Load Design</button>
+        <button id="deleteButton" onclick="deleteSelectedObject()" disabled>Delete Selected Object</button>
+        <div id="size-controls">
+            <label>Largo: <input type="range" id="length-slider" min="1" max="10" step="0.1" value="5"></label>
+            <label>Ancho: <input type="range" id="width-slider" min="1" max="5" step="0.1" value="2.5"></label>
+        </div>
+        <div id="height-controls">
+            <label>Altura: <input type="range" id="shelf-height-slider" min="0.1" max="1" step="0.05" value="0.1"></label>
+            <label>Anchura: <input type="range" id="shelf-width-slider" min="0.5" max="5" step="0.1" value="2"></label>
+        </div>
+    </div>
+
+    <div id="object-bar">
+        <div class="object-item" id="add-countertop" draggable="true" data-object="countertop">Añadir Encimera</div>
+        <div class="object-item" data-object="sink" draggable="true">Fregadero</div>
+        <div class="object-item" data-object="shelf" draggable="true">Entrepaño</div>
+        <div class="object-item" data-object="backsplash" draggable="true">Copete</div>
+        <div class="object-item" id="load-model" draggable="true">Cargar Modelo</div>
+    </div>
+
+    <!-- Input para seleccionar archivos, oculto -->
+    <input type="file" id="file-input" accept=".glb">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0xffffff, 1); // Fondo blanco
+        document.body.appendChild(renderer.domElement);
+
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 7.5);
+        scene.add(light);
+
+        const textureLoader = new THREE.TextureLoader();
+        const countertopTexture = textureLoader.load('path_to_your_texture_image.jpg');
+
+        let selectedObject = null;
+        let outlineMesh = null;
+        let draggingCountertop = null;
+        let draggingObject = null;
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.25;
+        controls.enableZoom = true;
+
+        // Posición inicial de la cámara
+        camera.position.set(7, 5, 7);
+        controls.update();
+
+        const objects = [];
+        const countertops = [];
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Manejo del drag and drop
+        document.querySelectorAll('.object-item').forEach(item => {
+            item.addEventListener('dragstart', (event) => {
+                event.dataTransfer.setData('objectType', item.getAttribute('data-object'));
+            });
+        });
+
+        renderer.domElement.addEventListener('dragover', (event) => {
+            event.preventDefault();
+        });
+
+        renderer.domElement.addEventListener('drop', (event) => {
+            event.preventDefault();
+
+            const mouse = new THREE.Vector2(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -(event.clientY / window.innerHeight) * 2 + 1
+            );
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(scene.children);
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                const objectType = event.dataTransfer.getData('objectType');
+
+                let newObject;
+                if (objectType === 'countertop') {
+                    newObject = createCountertop();
+                    countertops.push(newObject);
+                    newObject.userData.type = 'countertop';
+                } else if (objectType === 'sink') {
+                    newObject = createRealisticSink();
+                    newObject.userData.type = 'sink';
+                } else if (objectType === 'shelf') {
+                    const shelfGeometry = new THREE.BoxGeometry(2, 0.1, 0.5);
+                    const shelfMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+                    newObject = new THREE.Mesh(shelfGeometry, shelfMaterial);
+                    newObject.userData.type = 'shelf';
+                } else if (objectType === 'backsplash') {
+                    const backsplashGeometry = new THREE.BoxGeometry(5, 0.2, 0.1);
+                    const backsplashMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700 });
+                    newObject = new THREE.Mesh(backsplashGeometry, backsplashMaterial);
+                    newObject.userData.type = 'backsplash';
+                } else if (objectType === 'load-model') {
+                    document.getElementById('file-input').click();
+                    return; // Esperar a que el usuario seleccione un archivo
+                }
+
+                if (newObject) {
+                    newObject.position.copy(intersect.point).add(intersect.face.normal);
+                    newObject.position.divide(intersect.object.scale);
+                    newObject.position.y = 0.1; // Asegurar que el objeto esté sobre la encimera
+                    scene.add(newObject);
+                    objects.push(newObject);
+                    selectObject(newObject);
+                }
+            }
+        });
+
+        document.querySelector('#add-countertop').addEventListener('click', () => {
+            const countertop = createCountertop();
+            countertop.position.set(0, 0.1, 0); // Posición inicial para la nueva encimera
+            countertop.userData.type = 'countertop';
+            scene.add(countertop);
+            objects.push(countertop);
+            countertops.push(countertop);
+            selectObject(countertop);
+        });
+
+        document.getElementById('length-slider').addEventListener('input', (event) => {
+            if (selectedObject && selectedObject.userData.type === 'countertop') {
+                const length = parseFloat(event.target.value);
+                selectedObject.scale.x = length / 5;
+            }
+        });
+
+        document.getElementById('width-slider').addEventListener('input', (event) => {
+            if (selectedObject && selectedObject.userData.type === 'countertop') {
+                const width = parseFloat(event.target.value);
+                selectedObject.scale.z = width / 2.5;
+            }
+        });
+
+        document.getElementById('shelf-height-slider').addEventListener('input', (event) => {
+            if (selectedObject && selectedObject.userData.type === 'shelf') {
+                const newHeight = parseFloat(event.target.value);
+                const heightDifference = newHeight - selectedObject.scale.y * 0.1; // Obtener la diferencia en altura
+                selectedObject.scale.y = newHeight / 0.1; // Ajustar la altura del entrepaño
+                selectedObject.position.y += heightDifference / 2; // Mover hacia arriba la mitad de la diferencia
+            }
+        });
+
+        document.getElementById('shelf-width-slider').addEventListener('input', (event) => {
+            if (selectedObject && selectedObject.userData.type === 'shelf') {
+                const shelfWidth = parseFloat(event.target.value);
+                selectedObject.scale.x = shelfWidth / 2; // Ajustar la anchura del entrepaño
+            }
+        });
+
+        // Cargar el modelo GLB seleccionado por el usuario
+        document.getElementById('file-input').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                loadGLBModel(url);
+            }
+        });
+
+        function createCountertop() {
+            const geometry = new THREE.BoxGeometry(5, 0.2, 2.5);
+            const material = new THREE.MeshStandardMaterial({ map: countertopTexture });
+            return new THREE.Mesh(geometry, material);
+        }
+
+        function createRealisticSink() {
+            const sinkGroup = new THREE.Group();
+
+            // Crear la geometría del fregadero principal
+            const outerGeometry = new THREE.BoxGeometry(1.2, 0.5, 0.8);
+            const innerGeometry = new THREE.BoxGeometry(1.1, 0.45, 0.7);
+
+            const outerMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8, roughness: 0.2 });
+            const innerMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.8, roughness: 0.4 });
+
+            const outerSink = new THREE.Mesh(outerGeometry, outerMaterial);
+            const innerSink = new THREE.Mesh(innerGeometry, innerMaterial);
+
+            innerSink.position.y = 0.025; // Ajuste de la posición del interior
+            outerSink.add(innerSink);
+            sinkGroup.add(outerSink);
+
+            // Crear un borde para el fregadero
+            const edgeGeometry = new THREE.BoxGeometry(1.3, 0.05, 0.9);
+            const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0x999999, metalness: 0.8, roughness: 0.3 });
+            const edge = new THREE.Mesh(edgeGeometry, edgeMaterial);
+            edge.position.y = 0.27;
+            sinkGroup.add(edge);
+
+            sinkGroup.userData.type = 'sink'; // Asignar tipo al grupo para la selección
+            return sinkGroup;
+        }
+
+        function loadGLBModel(path) {
+            const loader = new THREE.GLTFLoader();
+            loader.load(path, (gltf) => {
+                const model = gltf.scene;
+                model.scale.set(0.5, 0.5, 0.5); // Ajusta la escala según sea necesario
+                model.position.set(0, 0.1, 0); // Posición inicial del modelo
+                model.userData.type = 'customModel'; // Asigna un tipo para la interacción
+
+                scene.add(model);
+                objects.push(model); // Asegúrate de que el modelo se pueda seleccionar y mover
+
+                // Selecciona automáticamente el modelo cargado
+                selectObject(model);
+            }, undefined, (error) => {
+                console.error('Error al cargar el modelo GLB:', error);
+            });
+        }
+
+        renderer.domElement.addEventListener('pointermove', (event) => {
+            if (draggingCountertop && event.buttons === 1) {
+                const mouse = new THREE.Vector2(
+                    (event.clientX / window.innerWidth) * 2 - 1,
+                    -(event.clientY / window.innerHeight) * 2 + 1
+                );
+
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(mouse, camera);
+
+                const intersects = raycaster.intersectObjects(scene.children);
+                if (intersects.length > 0) {
+                    draggingCountertop.position.copy(intersects[0].point);
+                    draggingCountertop.position.y = 0.1; // Mantener las encimeras a la misma altura
+
+                    // Fusión automática con otras encimeras
+                    mergeCountertops(draggingCountertop);
+                }
+            }
+
+            if (draggingObject) {
+                const mouse = new THREE.Vector2(
+                    (event.clientX / window.innerWidth) * 2 - 1,
+                    -(event.clientY / window.innerHeight) * 2 + 1
+                );
+
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(mouse, camera);
+
+                const intersects = raycaster.intersectObjects(countertops);
+                if (intersects.length > 0) {
+                    draggingObject.position.copy(intersects[0].point);
+                    if (draggingObject.userData.type === 'shelf') {
+                        // Alinear el entrepaño con el borde más cercano de la encimera
+                        const distances = [
+                            intersects[0].object.position.z - intersects[0].object.scale.z / 2, // Frente
+                            intersects[0].object.position.z + intersects[0].object.scale.z / 2, // Parte trasera
+                            intersects[0].object.position.x - intersects[0].object.scale.x / 2, // Izquierda
+                            intersects[0].object.position.x + intersects[0].object.scale.x / 2  // Derecha
+                        ];
+
+                        const minDistance = Math.min(...distances.map(d => Math.abs(d - draggingObject.position.z)));
+                        const closestEdge = distances.find(d => Math.abs(d - draggingObject.position.z) === minDistance);
+
+                        if (closestEdge === distances[0] || closestEdge === distances[1]) {
+                            draggingObject.position.z = closestEdge;
+                        } else {
+                            draggingObject.position.x = closestEdge;
+                        }
+                    }
+                    draggingObject.position.y = draggingObject.userData.type === 'backsplash' ? 0.2 : 0.15;
+                }
+            }
+        });
+
+        renderer.domElement.addEventListener('pointerdown', (event) => {
+            if (draggingObject) {
+                objects.push(draggingObject);
+                selectObject(draggingObject);
+                draggingObject = null; // Soltar el objeto
+            } else {
+                const mouse = new THREE.Vector2(
+                    (event.clientX / window.innerWidth) * 2 - 1,
+                    -(event.clientY / window.innerHeight) * 2 + 1
+                );
+
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(mouse, camera);
+
+                const intersects = raycaster.intersectObjects(objects, true); // Buscar en todos los hijos
+                if (intersects.length > 0) {
+                    selectObject(intersects[0].object);
+                    if (selectedObject.userData.type === 'countertop') {
+                        setTopView();
+                        draggingCountertop = selectedObject;
+                    }
+                } else {
+                    controls.enabled = true;
+                    deselectObject();
+                }
+            }
+        });
+
+        renderer.domElement.addEventListener('pointerup', () => {
+            draggingCountertop = null;
+            if (selectedObject && selectedObject.userData.type === 'countertop') {
+                controls.enabled = true;
+            }
+        });
+
+        function selectObject(object) {
+            deselectObject();
+            selectedObject = object;
+
+            if (selectedObject.userData.type === 'countertop') {
+                document.getElementById('size-controls').style.display = 'flex';
+                document.getElementById('height-controls').style.display = 'none';
+            } else if (selectedObject.userData.type === 'shelf') {
+                document.getElementById('height-controls').style.display = 'flex';
+                document.getElementById('size-controls').style.display = 'none';
+            } else {
+                document.getElementById('size-controls').style.display = 'none';
+                document.getElementById('height-controls').style.display = 'none';
+            }
+
+            const outlineMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffff00,
+                side: THREE.BackSide
+            });
+            outlineMesh = new THREE.Mesh(object.geometry, outlineMaterial);
+            outlineMesh.scale.multiplyScalar(1.05);
+            outlineMesh.position.copy(object.position);
+            scene.add(outlineMesh);
+
+            document.getElementById('deleteButton').disabled = false;
+        }
+
+        function deselectObject() {
+            if (selectedObject) {
+                scene.remove(outlineMesh);
+                selectedObject = null;
+                outlineMesh = null;
+                document.getElementById('deleteButton').disabled = true;
+            }
+            document.getElementById('size-controls').style.display = 'none';
+            document.getElementById('height-controls').style.display = 'none';
+        }
+
+        function setTopView() {
+            // Cambiar la vista superior y fijar la cámara
+            camera.position.set(0, 10, 0);
+            camera.lookAt(0, 0, 0);
+            controls.enabled = false; // Deshabilitar los controles de cámara mientras se mueve la encimera
+        }
+
+        function mergeCountertops(currentCountertop) {
+            const mergeThreshold = 0.2; // Distancia máxima para fusionar
+            countertops.forEach(otherCountertop => {
+                if (otherCountertop !== currentCountertop) {
+                    const distance = currentCountertop.position.distanceTo(otherCountertop.position);
+                    if (distance < mergeThreshold) {
+                        // Alinear y fusionar
+                        const offset = currentCountertop.position.clone().sub(otherCountertop.position);
+                        if (Math.abs(offset.x) < mergeThreshold) {
+                            currentCountertop.position.x = otherCountertop.position.x;
+                        }
+                        if (Math.abs(offset.z) < mergeThreshold) {
+                            currentCountertop.position.z = otherCountertop.position.z;
+                        }
+                    }
+                }
+            });
+        }
+
+        function deleteSelectedObject() {
+            if (selectedObject) {
+                scene.remove(selectedObject);
+                objects.splice(objects.indexOf(selectedObject), 1);
+                countertops.splice(countertops.indexOf(selectedObject), 1);
+                deselectObject();
+            }
+        }
+
+        function saveDesign() {
+            const design = objects.map(obj => ({
+                type: obj.userData.type,
+                position: obj.position.clone(),
+                rotation: obj.rotation.clone(),
+                scale: obj.scale.clone()
+            }));
+            localStorage.setItem('countertopDesign', JSON.stringify(design));
+        }
+
+        function loadDesign() {
+            const design = JSON.parse(localStorage.getItem('countertopDesign'));
+            if (design) {
+                design.forEach(data => {
+                    let object;
+                    if (data.type === 'sink') {
+                        object = createRealisticSink();
+                    } else if (data.type === 'shelf') {
+                        const shelfGeometry = new THREE.BoxGeometry(2, 0.1, 0.5);
+                        const shelfMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+                        object = new THREE.Mesh(shelfGeometry, shelfMaterial);
+                    } else if (data.type === 'backsplash') {
+                        const backsplashGeometry = new THREE.BoxGeometry(5, 0.2, 0.1);
+                        const backsplashMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700 });
+                        object = new THREE.Mesh(backsplashGeometry, backsplashMaterial);
+                    } else if (data.type === 'countertop') {
+                        const geometry = new THREE.BoxGeometry(5, 0.2, 2.5);
+                        const material = new THREE.MeshStandardMaterial({ map: countertopTexture });
+                        object = new THREE.Mesh(geometry, material);
+                        object.position.set(0, 0.1, 0); // Posición fija para la encimera
+                        object.userData.type = 'countertop';
+                        countertops.push(object);
+                    } else if (data.type === 'customModel') {
+                        loadGLBModel('path_to_your_model.glb'); // Vuelve a cargar el modelo personalizado
+                    }
+
+                    if (object) {
+                        object.position.copy(data.position);
+                        object.rotation.copy(data.rotation);
+                        object.scale.copy(data.scale);
+                        object.userData.type = data.type;
+
+                        scene.add(object);
+                        objects.push(object);
+                    }
+                });
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        });
+    </script>
+{% endblock %}

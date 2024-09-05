@@ -1,0 +1,157 @@
+{% extends 'admin_base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Gestionar Campos de Configuración</h2>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Válvulas con Logo</h4>
+            <a href="{{ url_for('agregar_valvula_logo') }}" class="btn btn-primary mb-3">Nueva Válvula con Logo</a>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Precio Adicional</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for valvula in valvulas %}
+                    <tr>
+                        <td>{{ valvula.nombre }}</td>
+                        <td>{{ valvula.precio_adicional }}€</td>
+                        <td>
+                            <a href="{{ url_for('editar_valvula_logo', id=valvula.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                            <form action="{{ url_for('eliminar_valvula_logo', id=valvula.id) }}" method="post" style="display:inline-block;">
+                                <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="col-md-6">
+            <h4>Agujeros para Grifo</h4>
+            <a href="{{ url_for('agregar_agujero_grifo') }}" class="btn btn-primary mb-3">Nuevo Agujero para Grifo</a>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Precio Adicional</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for agujero in agujeros %}
+                    <tr>
+                        <td>{{ agujero.nombre }}</td>
+                        <td>{{ agujero.precio_adicional }}€</td>
+                        <td>
+                            <a href="{{ url_for('editar_agujero_grifo', id=agujero.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                            <form action="{{ url_for('eliminar_agujero_grifo', id=agujero.id) }}" method="post" style="display:inline-block;">
+                                <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-6">
+            <h4>Toalleros</h4>
+            <a href="{{ url_for('agregar_toallero') }}" class="btn btn-primary mb-3">Nuevo Toallero</a>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Posición</th>
+                        <th>Precio Adicional</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for toallero in toalleros %}
+                    <tr>
+                        <td>{{ toallero.posicion }}</td>
+                        <td>{{ toallero.precio_adicional }}€</td>
+                        <td>
+                            <a href="{{ url_for('editar_toallero', id=toallero.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                            <form action="{{ url_for('eliminar_toallero', id=toallero.id) }}" method="post" style="display:inline-block;">
+                                <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="col-md-6">
+            <h4>Faldones</h4>
+            <a href="{{ url_for('agregar_faldon') }}" class="btn btn-primary mb-3">Nuevo Faldón</a>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Posición</th>
+                        <th>Medida</th>
+                        <th>Precio Adicional</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for faldon in faldones %}
+                    <tr>
+                        <td>{{ faldon.posicion }}</td>
+                        <td>{{ faldon.medida }} mm</td>
+                        <td>{{ faldon.precio_adicional }}€</td>
+                        <td>
+                            <a href="{{ url_for('editar_faldon', id=faldon.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                            <form action="{{ url_for('eliminar_faldon', id=faldon.id) }}" method="post" style="display:inline-block;">
+                                <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-12">
+            <h4>Entrepano</h4>
+            <a href="{{ url_for('agregar_entrepano') }}" class="btn btn-primary mb-3">Nuevo Entrepano</a>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Medida</th>
+                        <th>Precio Adicional</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entrepano in entrepanos %}
+                    <tr>
+                        <td>{{ entrepano.tipo }}</td>
+                        <td>{{ entrepano.medida }} mm</td>
+                        <td>{{ entrepano.precio_adicional }}€</td>
+                        <td>
+                            <a href="{{ url_for('editar_entrepano', id=entrepano.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                            <form action="{{ url_for('eliminar_entrepano', id=entrepano.id) }}" method="post" style="display:inline-block;">
+                                <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'admin_base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Tipos de Fregadero</h2>
+    <a href="{{ url_for('agregar_tipo_fregadero') }}" class="btn btn-primary mb-3">Nuevo Tipo de Fregadero</a>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Precio Adicional</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tipo in tipos_fregadero %}
+            <tr>
+                <td>{{ tipo.nombre }}</td>
+                <td>{{ tipo.precio_adicional }}</td>
+                <td>
+                    <a href="{{ url_for('editar_tipo_fregadero', tipo_id=tipo.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                    <form action="{{ url_for('eliminar_tipo_fregadero', tipo_id=tipo.id) }}" method="post" style="display:inline-block;">
+                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

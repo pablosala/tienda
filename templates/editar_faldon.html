@@ -1,0 +1,27 @@
+{% extends 'admin_base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Editar Faldón</h2>
+    <form action="{{ url_for('editar_faldon', id=faldon.id) }}" method="POST">
+        <div class="form-group">
+            <label for="posicion">Posición</label>
+            <select class="form-control" id="posicion" name="posicion" required>
+                <option value="FRONTAL" {% if faldon.posicion == 'FRONTAL' %}selected{% endif %}>Frontal</option>
+                <option value="TRASERO" {% if faldon.posicion == 'TRASERO' %}selected{% endif %}>Trasero</option>
+                <option value="IZQUIERDO" {% if faldon.posicion == 'IZQUIERDO' %}selected{% endif %}>Izquierdo</option>
+                <option value="DERECHO" {% if faldon.posicion == 'DERECHO' %}selected{% endif %}>Derecho</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="medida">Medida (mm)</label>
+            <input type="number" class="form-control" id="medida" name="medida" value="{{ faldon.medida }}" step="0.01" required>
+        </div>
+        <div class="form-group">
+            <label for="precio_adicional">Precio Adicional</label>
+            <input type="number" class="form-control" id="precio_adicional" name="precio_adicional" value="{{ faldon.precio_adicional }}" step="0.01" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+    </form>
+</div>
+{% endblock %}

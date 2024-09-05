@@ -133,6 +133,8 @@ class Producto(db.Model):
     imagenes = db.relationship('Imagen', backref='producto', lazy=True, cascade="all, delete-orphan")
     valoraciones = db.relationship('Valoracion', backref='producto_valoraciones', lazy=True)
     especificaciones = db.relationship('Especificacion', backref='producto', lazy=True, cascade="all, delete-orphan")
+    configuraciones_encimera = db.relationship('EncimeraConfiguracion', backref='producto', lazy=True, cascade="all, delete-orphan")
+    configuraciones_lavabo = db.relationship('LavaboConfiguracion', backref='producto', lazy=True, cascade="all, delete-orphan")
 
     def verificar_descuento_expirado(self):
         madrid_tz = timezone('Europe/Madrid')
@@ -149,12 +151,14 @@ class Producto(db.Model):
             self.fecha_fin_descuento = None
             db.session.commit()
 
+
 class Especificacion(db.Model):
     __tablename__ = 'especificacion'
     
     id = db.Column(db.Integer, primary_key=True)
     descripcion = db.Column(db.String(255), nullable=False)
     producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
+
 
 class Imagen(db.Model):
     __tablename__ = 'imagen'
@@ -172,12 +176,11 @@ class Orden(db.Model):
     fecha_actualizacion = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     direccion_envio_id = db.Column(db.Integer, db.ForeignKey('direccion.id'), nullable=False)
-    metodo_pago = db.Column(db.String(50), nullable=False)  # Nuevo campo para el método de pago
+    metodo_pago = db.Column(db.String(50), nullable=False)
     total = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='Pending')
     notas = db.Column(db.Text, nullable=True)
     productos = db.relationship('OrdenProducto', backref='orden', lazy=True, cascade="all, delete-orphan")
-
 
 
 class OrdenProducto(db.Model):
@@ -187,6 +190,16 @@ class OrdenProducto(db.Model):
     producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), primary_key=True)
     cantidad = db.Column(db.Integer, nullable=False)
     precio = db.Column(db.Float, nullable=False)
+    ancho = db.Column(db.Float, nullable=True)
+    largo = db.Column(db.Float, nullable=True)
+    grosor = db.Column(db.Float, nullable=True)
+    material_id = db.Column(db.Integer, db.ForeignKey('material_encimera.id'), nullable=True)
+    tipo_fregadero_id = db.Column(db.Integer, db.ForeignKey('tipo_fregadero.id'), nullable=True)
+    tipo_lavabo_id = db.Column(db.Integer, db.ForeignKey('tipo_lavabo.id'), nullable=True)
+    valvula_logo_id = db.Column(db.Integer, db.ForeignKey('valvula_logo.id'), nullable=True)
+    agujero_grifo_id = db.Column(db.Integer, db.ForeignKey('agujero_grifo.id'), nullable=True)
+    toalleros = db.relationship('Toallero', backref='orden_producto', lazy=True, cascade="all, delete-orphan")
+    entrepanos = db.relationship('Entrepano', backref='orden_producto', lazy=True, cascade="all, delete-orphan")
 
 
 class Carrito(db.Model):
@@ -204,6 +217,21 @@ class CarritoItem(db.Model):
     carrito_id = db.Column(db.Integer, db.ForeignKey('carrito.id'), nullable=False)
     producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
     cantidad = db.Column(db.Integer, nullable=False)
+    ancho = db.Column(db.Float, nullable=True)
+    largo = db.Column(db.Float, nullable=True)
+    grosor = db.Column(db.Float, nullable=True)
+    material_id = db.Column(db.Integer, db.ForeignKey('material_encimera.id'), nullable=True)
+    tipo_fregadero_id = db.Column(db.Integer, db.ForeignKey('tipo_fregadero.id'), nullable=True)
+    tipo_lavabo_id = db.Column(db.Integer, db.ForeignKey('tipo_lavabo.id'), nullable=True)
+    valvula_logo_id = db.Column(db.Integer, db.ForeignKey('valvula_logo.id'), nullable=True)
+    agujero_grifo_id = db.Column(db.Integer, db.ForeignKey('agujero_grifo.id'), nullable=True)
+    
+    # Relaciones con las tablas asociadas
+    toalleros = db.relationship('Toallero', backref='carrito_item', lazy=True, cascade="all, delete-orphan")
+    faldones = db.relationship('Faldon', backref='carrito_item', lazy=True, cascade="all, delete-orphan")
+    entrepanos = db.relationship('Entrepano', backref='carrito_item', lazy=True, cascade="all, delete-orphan")
+    
+    # Relación con el producto
     producto = db.relationship('Producto', backref='carrito_items')
 
 
@@ -232,6 +260,124 @@ class Valoracion(db.Model):
 
     usuario = db.relationship('Usuario', backref='valoraciones_usuario', lazy=True)
     producto = db.relationship('Producto', backref='valoraciones_producto', lazy=True)
+
+
+class MaterialEncimera(db.Model):
+    __tablename__ = 'material_encimera'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), unique=True, nullable=False)
+    precio_por_m2 = db.Column(db.Float, nullable=False)
+    configuraciones = db.relationship('EncimeraConfiguracion', backref='material', lazy=True)
+    ordenes_producto = db.relationship('OrdenProducto', backref='material', lazy=True)
+
+
+class TipoFregadero(db.Model):
+    __tablename__ = 'tipo_fregadero'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), unique=True, nullable=False)
+    precio_adicional = db.Column(db.Float, nullable=False)
+    ordenes_producto = db.relationship('OrdenProducto', backref='tipo_fregadero', lazy=True)
+
+
+class EncimeraConfiguracion(db.Model):
+    __tablename__ = 'encimera_configuracion'
+    id = db.Column(db.Integer, primary_key=True)
+    producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
+    material_id = db.Column(db.Integer, db.ForeignKey('material_encimera.id'), nullable=False)
+    grosor = db.Column(db.Float, nullable=False)
+    valvula_logo_id = db.Column(db.Integer, db.ForeignKey('valvula_logo.id'), nullable=True)
+    agujero_grifo_id = db.Column(db.Integer, db.ForeignKey('agujero_grifo.id'), nullable=True)
+    toalleros = db.relationship('Toallero', backref='encimera_configuracion', lazy=True, cascade="all, delete-orphan")
+    faldones = db.relationship('Faldon', backref='encimera_configuracion', lazy=True, cascade="all, delete-orphan")
+    entrepanos = db.relationship('Entrepano', backref='encimera_configuracion', lazy=True, cascade="all, delete-orphan")
+
+
+class TipoLavabo(db.Model):
+    __tablename__ = 'tipo_lavabo'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), unique=True, nullable=False)
+    precio_adicional = db.Column(db.Float, nullable=False)
+    ordenes_producto = db.relationship('OrdenProducto', backref='tipo_lavabo', lazy=True)
+
+
+class LavaboConfiguracion(db.Model):
+    __tablename__ = 'lavabo_configuracion'
+    id = db.Column(db.Integer, primary_key=True)
+    producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
+    largo = db.Column(db.Float, nullable=False)
+    ancho = db.Column(db.Float, nullable=False)
+    material_id = db.Column(db.Integer, db.ForeignKey('material_encimera.id'), nullable=False)  # Nueva relación
+    tipo_lavabo_id = db.Column(db.Integer, db.ForeignKey('tipo_lavabo.id'), nullable=False)
+    valvula_logo_id = db.Column(db.Integer, db.ForeignKey('valvula_logo.id'), nullable=True)
+    agujero_grifo_id = db.Column(db.Integer, db.ForeignKey('agujero_grifo.id'), nullable=True)
+    toalleros = db.relationship('Toallero', backref='lavabo_configuracion', lazy=True, cascade="all, delete-orphan")
+    faldones = db.relationship('Faldon', backref='lavabo_configuracion', lazy=True, cascade="all, delete-orphan")
+    material = db.relationship('MaterialEncimera', backref='lavabo_configuraciones', lazy=True)  # Relación con MaterialEncimera
+
+
+
+class ValvulaLogo(db.Model):
+    __tablename__ = 'valvula_logo'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(50), nullable=False, unique=True)
+    precio_adicional = db.Column(db.Float, nullable=False)
+    encimera_configuraciones = db.relationship('EncimeraConfiguracion', backref='valvula_logo', lazy=True)
+    lavabo_configuraciones = db.relationship('LavaboConfiguracion', backref='valvula_logo', lazy=True)
+
+
+class AgujeroGrifo(db.Model):
+    __tablename__ = 'agujero_grifo'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(50), nullable=False, unique=True)
+    precio_adicional = db.Column(db.Float, nullable=False)
+    encimera_configuraciones = db.relationship('EncimeraConfiguracion', backref='agujero_grifo', lazy=True)
+    lavabo_configuraciones = db.relationship('LavaboConfiguracion', backref='agujero_grifo', lazy=True)
+
+
+class Toallero(db.Model):
+    __tablename__ = 'toallero'
+    id = db.Column(db.Integer, primary_key=True)
+    posicion = db.Column(db.Enum('FRONTAL', 'LATERAL_DERECHO', 'LATERAL_IZQUIERDO'), nullable=False)
+    precio_adicional = db.Column(db.Float, nullable=False)
+    encimera_id = db.Column(db.Integer, db.ForeignKey('encimera_configuracion.id'), nullable=True)
+    lavabo_id = db.Column(db.Integer, db.ForeignKey('lavabo_configuracion.id'), nullable=True)
+    orden_producto_id = db.Column(db.Integer, db.ForeignKey('orden_producto.orden_id'), nullable=True)
+    carrito_item_id = db.Column(db.Integer, db.ForeignKey('carrito_item.id'), nullable=True)
+
+
+class Faldon(db.Model):
+    __tablename__ = 'faldon'
+    id = db.Column(db.Integer, primary_key=True)
+    posicion = db.Column(db.Enum('FRONTAL', 'TRASERO', 'IZQUIERDO', 'DERECHO'), nullable=False)
+    medida = db.Column(db.Float, nullable=False)
+    precio_adicional = db.Column(db.Float, nullable=False)
+    encimera_id = db.Column(db.Integer, db.ForeignKey('encimera_configuracion.id'), nullable=True)
+    lavabo_id = db.Column(db.Integer, db.ForeignKey('lavabo_configuracion.id'), nullable=True)
+    carrito_item_id = db.Column(db.Integer, db.ForeignKey('carrito_item.id'), nullable=True)
+
+
+class Entrepano(db.Model):
+    __tablename__ = 'entrepano'
+    id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.Enum('RECTO', 'SANITARIO'), nullable=False)
+    medida = db.Column(db.Float, nullable=False)
+    precio_adicional = db.Column(db.Float, nullable=False)
+    encimera_id = db.Column(db.Integer, db.ForeignKey('encimera_configuracion.id'), nullable=True)
+    orden_producto_id = db.Column(db.Integer, db.ForeignKey('orden_producto.orden_id'), nullable=True)
+    carrito_item_id = db.Column(db.Integer, db.ForeignKey('carrito_item.id'), nullable=True)
+
+
+class Personalizacion(db.Model):
+    __tablename__ = 'personalizacion'
+    id = db.Column(db.Integer, primary_key=True)
+    carrito_item_id = db.Column(db.Integer, db.ForeignKey('carrito_item.id'), nullable=False)
+    largo = db.Column(db.Float, nullable=False)
+    ancho = db.Column(db.Float, nullable=False)
+    material_id = db.Column(db.Integer, db.ForeignKey('material_encimera.id'), nullable=False)
+    precio_personalizado = db.Column(db.Float, nullable=False)
+
+    # Relación con el carrito item
+    carrito_item = db.relationship('CarritoItem', backref=db.backref('personalizaciones', uselist=True, cascade="all, delete-orphan"))
 
 
 def obtener_fecha_madrid():
@@ -302,20 +448,47 @@ def register():
     return render_template('register.html')
 
 
-
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
+        
+        # Primero, buscar en la tabla 'usuario'
         user = Usuario.query.filter_by(email=email).first()
-        if user and user.check_password(password):
+        
+        if user:
+            # Verificar la contraseña en 'usuario'
+            if not user.check_password(password):
+                flash('Correo electrónico o contraseña incorrectos.', 'danger')
+                return redirect(url_for('login'))
+            
+            # Verificar si el usuario ha confirmado su correo
+            if not user.is_confirmed:
+                flash('No has confirmado tu correo electrónico. Por favor, revisa tu bandeja de entrada o la carpeta de spam.', 'warning')
+                return render_template('resend_confirmation.html', email=email)
+            
+            # Iniciar sesión si las credenciales son correctas y el correo está confirmado
             login_user(user)
             return redirect(url_for('index'))
+        
         else:
-            flash('Credenciales inválidas', 'danger')
-            return redirect(url_for('login'))  # Redirigir para evitar el reenvío del formulario
+            # Si no se encuentra en 'usuario', buscar en 'temp_usuario'
+            temp_user = TempUsuario.query.filter_by(email=email).first()
+            
+            if temp_user:
+                # Verificar la contraseña en 'temp_usuario'
+                if temp_user.check_password(password):
+                    flash('No has confirmado tu correo electrónico. Por favor, revisa tu bandeja de entrada o la carpeta de spam.', 'warning')
+                    return render_template('resend_confirmation.html', email=email)
+                else:
+                    flash('Correo electrónico o contraseña incorrectos.', 'danger')
+                    return redirect(url_for('login'))
+            
+            # Si no se encuentra en ninguna tabla
+            flash('Correo electrónico o contraseña incorrectos.', 'danger')
+            return redirect(url_for('login'))
+    
     return render_template('login.html')
 
 
@@ -461,7 +634,13 @@ def eliminar_metodo_pago(metodo_id):
     flash('Método de pago eliminado con éxito!', 'success')
     return redirect(url_for('detalles_cuenta'))
 
-
+@app.template_filter('round2')
+def round2(value):
+    """Redondea un número a 2 decimales."""
+    try:
+        return round(float(value), 2)
+    except (ValueError, TypeError):
+        return value
 
 def encrypt_3DES(message, key):
     key = base64.b64decode(key)
@@ -531,7 +710,17 @@ def checkout():
             return redirect(url_for('checkout'))
 
         # Calcular el total del pedido
-        total_pedido = sum(item.cantidad * item.producto.precio for item in carrito.items)
+        total_pedido = 0
+        for item in carrito.items:
+            if item.personalizaciones:
+                # Si el producto tiene personalización, usa el precio personalizado
+                total_pedido += sum(p.precio_personalizado for p in item.personalizaciones) * item.cantidad
+            else:
+                # Si no, usa el precio estándar del producto
+                total_pedido += item.cantidad * item.producto.precio
+
+        # Redondear el total a 2 decimales
+        total_pedido = round(total_pedido, 2)
 
         # Calcular los gastos de envío si corresponde
         gastos_envio = 0
@@ -573,9 +762,29 @@ def checkout():
 
         return render_template('tpv_form.html', merchant_parameters=merchant_parameters_base64, signature=signature)
 
-    direcciones = Direccion.query.filter_by(usuario_id=usuario_id).all()
+    # Cargar las personalizaciones y sus relaciones asociadas
     carrito_items = CarritoItem.query.filter_by(carrito_id=carrito.id).all()
-    total_pedido = sum(item.cantidad * item.producto.precio for item in carrito_items)
+    for item in carrito_items:
+        # Cargar las relaciones que se necesitan en la plantilla
+        item.material = MaterialEncimera.query.get(item.material_id)
+        item.tipo_lavabo = TipoLavabo.query.get(item.tipo_lavabo_id)
+        item.valvula_logo = ValvulaLogo.query.get(item.valvula_logo_id)
+        item.agujero_grifo = AgujeroGrifo.query.get(item.agujero_grifo_id)
+        item.toalleros = Toallero.query.filter_by(carrito_item_id=item.id).all()
+        item.faldones = Faldon.query.filter_by(carrito_item_id=item.id).all()
+
+        for personalizacion in item.personalizaciones:
+            personalizacion.material = MaterialEncimera.query.get(personalizacion.material_id)
+
+    direcciones = Direccion.query.filter_by(usuario_id=usuario_id).all()
+
+    total_pedido = 0
+    for item in carrito_items:
+        if item.personalizaciones:
+            total_pedido += sum(p.precio_personalizado for p in item.personalizaciones) * item.cantidad
+        else:
+            total_pedido += item.cantidad * item.producto.precio
+
     gastos_envio = 5.99  # Tarifa fija de envío (por defecto, esto podría cambiar según el cálculo dinámico)
     total_a_pagar = total_pedido + gastos_envio
 
@@ -733,10 +942,37 @@ def producto_detalle(producto_id):
         flash('Gracias por tu valoración!', 'success')
         return redirect(url_for('producto_detalle', producto_id=producto_id))
 
-    return render_template('single.html', producto=producto, ha_comprado=ha_comprado, especificaciones=especificaciones)
+    # Obtener los datos relacionados necesarios para la configuración dinámica de precios
+    materiales = MaterialEncimera.query.all()
+    tipos_lavabo = TipoLavabo.query.all()
+    tipos_fregadero = TipoFregadero.query.all()
+    valvula_logo = ValvulaLogo.query.all()
+    agujero_grifo = AgujeroGrifo.query.all()
+    toalleros = Toallero.query.all()
+    faldon_precio = Faldon.query.all()
+    tipos_entrepano = Entrepano.query.all()
+    lavabo_configuracion = LavaboConfiguracion.query.filter_by(producto_id=producto_id).first()
+    encimera_configuracion = EncimeraConfiguracion.query.filter_by(producto_id=producto_id).first()
+
+    return render_template(
+        'single.html', 
+        producto=producto, 
+        ha_comprado=ha_comprado, 
+        especificaciones=especificaciones, 
+        materiales=materiales, 
+        tipos_lavabo=tipos_lavabo, 
+        tipos_fregadero=tipos_fregadero,
+        valvula_logo=valvula_logo,
+        agujero_grifo=agujero_grifo,
+        toalleros=toalleros,
+        faldon_precio=faldon_precio,
+        tipos_entrepano=tipos_entrepano,
+        lavabo_configuracion=lavabo_configuracion,
+        encimera_configuracion=encimera_configuracion
+    )
 
 
-@app.route('/agregar_carrito/<int:producto_id>', methods=['GET','POST'])
+@app.route('/agregar_carrito/<int:producto_id>', methods=['GET', 'POST'])
 @login_required
 def agregar_carrito(producto_id):
     producto = Producto.query.get_or_404(producto_id)
@@ -744,34 +980,170 @@ def agregar_carrito(producto_id):
     # Establecer la cantidad en 1 si no se especifica en el formulario
     cantidad = int(request.form.get('cantidad', 1))
 
+    # Recoger los datos del formulario
+    largo = request.form.get('largo_lavabo')
+    ancho = request.form.get('ancho_lavabo')
+    material_id = request.form.get('material_id_lavabo')
+    tipo_lavabo_id = request.form.get('tipo_lavabo_id')
+    medida_faldon = request.form.get('medida_faldon_lavabo')
+    lados_faldon = request.form.getlist('faldon_lados_lavabo[]')
+    
+    toallero_id = request.form.get('toallero_lavabo')
+    valvula_id = request.form.get('valvula_logo_id')
+    agujero_grifo_id = request.form.get('agujero_grifo_id')
+
+    # Verificar si el producto es personalizado
+    es_personalizado = bool(largo and ancho and material_id)
+
     carrito = Carrito.query.filter_by(usuario_id=current_user.id).first()
     if not carrito:
         carrito = Carrito(usuario_id=current_user.id)
         db.session.add(carrito)
         db.session.commit()
 
-    item = CarritoItem.query.filter_by(carrito_id=carrito.id, producto_id=producto_id).first()
+    if es_personalizado:
+        # Convertir los valores del formulario a sus tipos correspondientes
+        largo = float(largo) if largo else 0.0
+        ancho = float(ancho) if ancho else 0.0
+        material_id = int(material_id) if material_id else None
+        tipo_lavabo_id = int(tipo_lavabo_id) if tipo_lavabo_id else None
+        medida_faldon = float(medida_faldon) if medida_faldon else 0.0
+        toallero_id = int(toallero_id) if toallero_id else None
+        valvula_id = int(valvula_id) if valvula_id else None
+        agujero_grifo_id = int(agujero_grifo_id) if agujero_grifo_id else None
 
-    # Si el producto ya está en el carrito
-    if item:
-        # Verificar si la cantidad total después de agregar supera el stock
-        if item.cantidad + cantidad > producto.stock:
-            flash(f'Ya has añadido la cantidad máxima disponible de {producto.nombre}.', 'danger')
-            return redirect(request.referrer)
-        item.cantidad += cantidad
+        # Obtener los objetos relacionados
+        material = MaterialEncimera.query.get(material_id) if material_id else None
+        tipo_lavabo = TipoLavabo.query.get(tipo_lavabo_id) if tipo_lavabo_id else None
+        toallero = Toallero.query.get(toallero_id) if toallero_id else None
+        valvula = ValvulaLogo.query.get(valvula_id) if valvula_id else None
+        agujero_grifo = AgujeroGrifo.query.get(agujero_grifo_id) if agujero_grifo_id else None
+
+        # Calcular el precio personalizado
+        precio_personalizado = 0
+
+        # Sumar el precio adicional del tipo de lavabo
+        if tipo_lavabo:
+            precio_personalizado += tipo_lavabo.precio_adicional
+
+        # Agregar el costo del material (largo * ancho * precio_m2)
+        if material:
+            precio_personalizado += largo * ancho * material.precio_por_m2 / 1000000
+
+        # Calcular el precio del faldón y sumarlo al precio personalizado
+        if medida_faldon > 0 and lados_faldon:
+            # Precio por los lados izquierdo y derecho
+            for lado in lados_faldon:
+                if lado in ['IZQUIERDO', 'DERECHO']:
+                    precio_faldon_lados = ancho * medida_faldon * material.precio_por_m2 / 1000000
+                    precio_personalizado += precio_faldon_lados
+                
+            # Precio por el lado frontal
+            if 'FRONTAL' in lados_faldon:
+                precio_faldon_frontal = largo * medida_faldon * material.precio_por_m2 / 1000000
+                precio_personalizado += precio_faldon_frontal
+
+        # Sumar el precio del toallero seleccionado
+        if toallero:
+            precio_personalizado += toallero.precio_adicional
+
+        # Sumar el precio de la válvula seleccionada
+        if valvula:
+            precio_personalizado += valvula.precio_adicional
+
+        # Sumar el precio del agujero de grifo seleccionado
+        if agujero_grifo:
+            precio_personalizado += agujero_grifo.precio_adicional
+
+        # Verificar si ya existe un item con la misma personalización en el carrito
+        item = CarritoItem.query.filter_by(
+            carrito_id=carrito.id,
+            producto_id=producto_id,
+            largo=largo,
+            ancho=ancho,
+            material_id=material_id,
+            tipo_lavabo_id=tipo_lavabo_id,
+            valvula_logo_id=valvula_id,
+            agujero_grifo_id=agujero_grifo_id,
+        ).first()
+
+        if item:
+            # Si la personalización es la misma, incrementar la cantidad
+            if item.cantidad + cantidad > producto.stock:
+                flash(f'Ya has añadido la cantidad máxima disponible de {producto.nombre}.', 'danger')
+                return redirect(request.referrer)
+            item.cantidad += cantidad
+        else:
+            # Crear un nuevo item con personalización si no existe
+            if cantidad > producto.stock:
+                flash(f'No hay suficiente stock disponible para {producto.nombre}.', 'danger')
+                return redirect(request.referrer)
+
+            item = CarritoItem(
+                carrito_id=carrito.id,
+                producto_id=producto_id,
+                cantidad=cantidad,
+                largo=largo,
+                ancho=ancho,
+                material_id=material_id,
+                tipo_lavabo_id=tipo_lavabo_id,
+                valvula_logo_id=valvula_id,
+                agujero_grifo_id=agujero_grifo_id
+            )
+            db.session.add(item)
+            db.session.commit()
+
+            # Crear la personalización asociada
+            nueva_personalizacion = Personalizacion(
+                carrito_item_id=item.id,
+                largo=largo,
+                ancho=ancho,
+                material_id=material_id,
+                precio_personalizado=precio_personalizado
+            )
+            db.session.add(nueva_personalizacion)
+
+            # Crear y asociar los faldones seleccionados
+            if lados_faldon and medida_faldon > 0:
+                for lado in lados_faldon:
+                    faldon = Faldon(
+                        carrito_item_id=item.id,
+                        posicion=lado,
+                        medida=medida_faldon,
+                        precio_adicional=(ancho * medida_faldon if lado in ['izquierda', 'derecha'] else largo * medida_faldon) * material.precio_por_m2 / 1000000
+                    )
+                    db.session.add(faldon)
+
+        db.session.commit()
+
     else:
-        # Verificar si la cantidad solicitada supera el stock disponible
-        if cantidad > producto.stock:
-            flash(f'No hay suficiente stock disponible para {producto.nombre}.', 'danger')
-            return redirect(request.referrer)
-        item = CarritoItem(carrito_id=carrito.id, producto_id=producto_id, cantidad=cantidad)
-        db.session.add(item)
+        # Producto normal (sin personalización)
+        item = CarritoItem.query.filter_by(carrito_id=carrito.id, producto_id=producto_id, material_id=None).first()
+        if item:
+            # Si ya existe el producto en el carrito, incrementar la cantidad
+            if item.cantidad + cantidad > producto.stock:
+                flash(f'Ya has añadido la cantidad máxima disponible de {producto.nombre}.', 'danger')
+                return redirect(request.referrer)
+            item.cantidad += cantidad
+        else:
+            # Si no existe el producto en el carrito, agregarlo
+            if cantidad > producto.stock:
+                flash(f'No hay suficiente stock disponible para {producto.nombre}.', 'danger')
+                return redirect(request.referrer)
+
+            item = CarritoItem(
+                carrito_id=carrito.id,
+                producto_id=producto_id,
+                cantidad=cantidad
+            )
+            db.session.add(item)
 
     db.session.commit()
     flash(f'{producto.nombre} agregado al carrito', 'success')
 
-    # Redirigir de vuelta a la página desde donde se realizó la solicitud
     return redirect(request.referrer)
+
+
 
 
 
@@ -780,9 +1152,27 @@ def agregar_carrito(producto_id):
 def carrito():
     carrito = Carrito.query.filter_by(usuario_id=current_user.id).first()
     items = carrito.items if carrito else []
-    total = sum(item.cantidad * item.producto.precio for item in items)
+
+    total = 0
+    for item in items:
+        if item.personalizaciones:
+            # Sumar los precios personalizados para los productos personalizados
+            for personalizacion in item.personalizaciones:
+                total += item.cantidad * personalizacion.precio_personalizado
+        else:
+            # Sumar el precio normal para los productos sin personalización
+            total += item.cantidad * item.producto.precio
+
+    # Redondear el total a 2 decimales
+    total = round(total, 2)
+
     hay_agotados = any(item.producto.stock <= 0 or item.cantidad > item.producto.stock for item in items)
+    
     return render_template('carrito.html', items=items, total=total, hay_agotados=hay_agotados)
+
+
+
+
 
 
 @app.route('/carrito/actualizar', methods=['POST'])
@@ -795,17 +1185,38 @@ def actualizar_carrito():
             nueva_cantidad = request.form.get(f'cantidad_{producto_id}')
             if nueva_cantidad:
                 nueva_cantidad = int(nueva_cantidad)
+                
+                # Validar stock y cantidad
                 if nueva_cantidad > item.producto.stock:
                     flash(f'No puedes añadir más de {item.producto.stock} unidades de {item.producto.nombre}.', 'danger')
                 elif nueva_cantidad <= 0:
-                    db.session.delete(item)
+                    db.session.delete(item)  # Eliminar el item si la cantidad es cero o menor
                 else:
                     item.cantidad = nueva_cantidad
+
+                    # Si hay personalizaciones, calcular el subtotal correctamente
+                    if item.personalizaciones:
+                        for personalizacion in item.personalizaciones:
+                            # Mantener el precio unitario de la personalización y recalcular subtotal
+                            subtotal_personalizado = personalizacion.precio_personalizado * item.cantidad
+                            # Aquí puedes almacenar el subtotal si es necesario o solo calcularlo en la vista
+                            # Si tienes que guardarlo en base de datos, puedes usar un campo para "subtotal_personalizado"
+                            print(f"Subtotal personalizado para {item.producto.nombre}: {subtotal_personalizado}")
+                    else:
+                        # Si no tiene personalizaciones, el subtotal es solo la cantidad * precio del producto
+                        subtotal = item.cantidad * item.producto.precio
+                        print(f"Subtotal para {item.producto.nombre}: {subtotal}")
+
+        # Confirmar los cambios en la base de datos
         db.session.commit()
         flash('Carrito actualizado con éxito', 'success')
     else:
         flash('No se encontró el carrito.', 'danger')
     return redirect(url_for('carrito'))
+
+
+
+
 
 @app.route('/carrito/eliminar', methods=['POST'])
 @login_required
@@ -1040,8 +1451,9 @@ def admin_products():
 def agregar_producto():
     if current_user.role != 'admin':
         return redirect(url_for('index'))
-    
+
     if request.method == 'POST':
+        # Capturar los datos principales del producto
         nombre = request.form['nombre']
         descripcion = request.form['descripcion']
         precio = float(request.form['precio'])
@@ -1049,44 +1461,47 @@ def agregar_producto():
         categoria_id = int(request.form['categoria_id'])
         especificaciones = request.form.getlist('especificaciones')
 
-        producto = Producto(nombre=nombre, descripcion=descripcion, precio=precio, stock=stock, categoria_id=categoria_id)
+        # Crear el objeto Producto
+        producto = Producto(
+            nombre=nombre, 
+            descripcion=descripcion, 
+            precio=precio, 
+            stock=stock, 
+            categoria_id=categoria_id
+        )
         db.session.add(producto)
         db.session.commit()
 
+        # Guardar las especificaciones
         for especificacion in especificaciones:
             nueva_especificacion = Especificacion(descripcion=especificacion, producto_id=producto.id)
             db.session.add(nueva_especificacion)
-        
+
         # Guardar la imagen
-        if 'imagen' not in request.files:
-            flash('No se ha seleccionado ninguna imagen.', 'danger')
-            return redirect(request.url)
-        file = request.files['imagen']
-        if file.filename == '':
-            flash('No se ha seleccionado ninguna imagen.', 'danger')
-            return redirect(request.url)
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            imagen = Imagen(url=filename, producto_id=producto.id)
-            db.session.add(imagen)
+        if 'imagen' in request.files:
+            file = request.files['imagen']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                imagen = Imagen(url=filename, producto_id=producto.id)
+                db.session.add(imagen)
 
         # Guardar el modelo 3D
         if 'modelo_3d' in request.files:
             modelo_file = request.files['modelo_3d']
-            if modelo_file.filename != '' and allowed_file(modelo_file.filename):  # Reutiliza allowed_file si aplica
+            if modelo_file.filename != '' and allowed_file(modelo_file.filename):
                 modelo_filename = secure_filename(modelo_file.filename)
                 modelo_file.save(os.path.join(app.config['MODEL_UPLOAD_FOLDER'], modelo_filename))
-                producto.modelo_3d = modelo_filename  # Guardar la ruta relativa
-        
-        # Agregar descuento y fecha de fin de descuento
+                producto.modelo_3d = modelo_filename
+
+        # Manejar descuento
         descuento = request.form.get('descuento')
         if descuento and int(descuento) > 0:
             producto.descuento = int(descuento)
-            producto.precio_original = precio  # Guardar el precio original antes del descuento
+            producto.precio_original = precio
             producto.precio = precio * (1 - (producto.descuento / 100))
 
-            # Establecer la fecha de fin de descuento con la zona horaria de Madrid
+            # Establecer la fecha de fin de descuento
             fecha_fin_descuento_str = request.form.get('fecha_fin_descuento')
             if fecha_fin_descuento_str:
                 madrid = timezone('Europe/Madrid')
@@ -1098,11 +1513,158 @@ def agregar_producto():
             producto.fecha_fin_descuento = None
 
         db.session.commit()
+
+        # Manejar configuraciones de encimera o lavabo según el tipo de producto
+        tipo_producto = request.form.get('tipo_producto')
+
+        if tipo_producto == 'encimera':
+            # Crear configuración de encimera
+            material_id = int(request.form['material_id'])
+            grosor = float(request.form['grosor']) if request.form['grosor'] else 0
+
+            configuracion_encimera = EncimeraConfiguracion(
+                producto_id=producto.id,
+                material_id=material_id,
+                grosor=grosor
+            )
+            db.session.add(configuracion_encimera)
+            db.session.commit()
+
+            # Agregar válvula con logo
+            if 'valvula_logo_id' in request.form:
+                valvula_logo_id = int(request.form['valvula_logo_id'])
+                valvula_logo = ValvulaLogo.query.get(valvula_logo_id)
+                configuracion_encimera.valvula_logo_id = valvula_logo.id
+
+            # Agregar agujero para grifo
+            if 'agujero_grifo_id' in request.form:
+                agujero_grifo_id = int(request.form['agujero_grifo_id'])
+                configuracion_encimera.agujero_grifo_id = agujero_grifo_id
+
+            # Agregar toalleros
+            toalleros_ids = request.form.getlist('toallero_ids')
+            for toallero_id in toalleros_ids:
+                toallero = Toallero.query.get(int(toallero_id))
+                toallero.encimera_id = configuracion_encimera.id
+                db.session.add(toallero)
+
+            # Agregar faldones
+            faldones_ids = request.form.getlist('faldon_ids')
+            for faldon_id in faldones_ids:
+                faldon = Faldon.query.get(int(faldon_id))
+                faldon.encimera_id = configuracion_encimera.id
+                db.session.add(faldon)
+
+            # Agregar entrepaños
+            entrepanos_ids = request.form.getlist('entrepano_ids')
+            for entrepano_id in entrepanos_ids:
+                entrepano = Entrepano.query.get(int(entrepano_id))
+                entrepano.encimera_id = configuracion_encimera.id
+                db.session.add(entrepano)
+
+        elif tipo_producto == 'lavabo':
+            # Crear la configuración del lavabo
+            tipo_lavabo_id = int(request.form['tipo_lavabo_id'])
+            material_id_lavabo = int(request.form['material_id_lavabo'])
+            largo_lavabo = float(request.form['largo_lavabo'])
+            ancho_lavabo = float(request.form['ancho_lavabo'])
+
+            configuracion_lavabo = LavaboConfiguracion(
+                producto_id=producto.id,
+                tipo_lavabo_id=tipo_lavabo_id,
+                material_id=material_id_lavabo,
+                largo=largo_lavabo,
+                ancho=ancho_lavabo
+            )
+            db.session.add(configuracion_lavabo)
+            db.session.commit()
+
+            # Agregar válvula con logo solo si se selecciona algo válido
+            if 'valvula_logo_id' in request.form and request.form['valvula_logo_id']:
+                try:
+                    valvula_logo_id = int(request.form['valvula_logo_id_lavabo'])
+                    configuracion_lavabo.valvula_logo_id = valvula_logo_id
+                except ValueError:
+                    configuracion_lavabo.valvula_logo_id = None
+            else:
+                configuracion_lavabo.valvula_logo_id = None  # No se seleccionó válvula
+
+            # Agregar agujero para grifo solo si se selecciona algo válido
+            if 'agujero_grifo_id' in request.form and request.form['agujero_grifo_id']:
+                try:
+                    agujero_grifo_id = int(request.form['agujero_grifo_id_lavabo'])
+                    configuracion_lavabo.agujero_grifo_id = agujero_grifo_id
+                except ValueError:
+                    configuracion_lavabo.agujero_grifo_id = None
+            else:
+                configuracion_lavabo.agujero_grifo_id = None  # No se seleccionó agujero de grifo
+
+            db.session.commit()
+
+            # Agregar toalleros
+            toallero_lavabo = request.form.getlist('toallero_lavabo')
+            for toallero_id in toallero_lavabo:
+                toallero = Toallero.query.get(int(toallero_id))
+                toallero.lavabo_id = configuracion_lavabo.id
+                db.session.add(toallero)
+
+            # Cálculo del precio adicional de faldón
+            if 'faldon_lavabo' in request.form:
+                lados_faldon = request.form.getlist('faldon_lados_lavabo[]')
+                medida_faldon = float(request.form['medida_faldon_lavabo'])
+
+                if medida_faldon > 0 and lados_faldon:
+                    # Obtener el precio del material
+                    material = MaterialEncimera.query.get(material_id_lavabo)
+                    precio_faldon_total = 0
+
+                    # Precio por los lados izquierdo y derecho
+                    for lado in lados_faldon:
+                        if lado in ['IZQUIERDO', 'DERECHO']:
+                            precio_faldon_lados = ancho_lavabo * medida_faldon * material.precio_por_m2 / 1000000
+                            precio_faldon_total += precio_faldon_lados
+
+                    # Precio por el lado frontal
+                    if 'FRONTAL' in lados_faldon:
+                        precio_faldon_frontal = largo_lavabo * medida_faldon * material.precio_por_m2 / 1000000
+                        precio_faldon_total += precio_faldon_frontal
+
+                    # Guardar los faldones en la base de datos
+                    for lado_faldon in lados_faldon:
+                        nuevo_faldon = Faldon(
+                            posicion=lado_faldon,
+                            medida=medida_faldon,
+                            precio_adicional=precio_faldon_total,
+                            lavabo_id=configuracion_lavabo.id
+                        )
+                        db.session.add(nuevo_faldon)
+
+        db.session.commit()
+
         flash('Producto agregado con éxito', 'success')
         return redirect(url_for('admin_products'))
-    
+
+    # Renderizar el formulario para agregar el producto
     categorias = Categoria.query.all()
-    return render_template('agregar_producto.html', categorias=categorias)
+    materiales = MaterialEncimera.query.all()
+    tipos_lavabo = TipoLavabo.query.all()
+    tipos_fregadero = TipoFregadero.query.all()
+    valvulas_logo = ValvulaLogo.query.all()
+    agujeros_grifo = AgujeroGrifo.query.all()
+    toalleros = Toallero.query.all()
+    faldones = Faldon.query.all()
+    entrepanos = Entrepano.query.all()
+
+    return render_template('agregar_producto.html', 
+                           categorias=categorias, 
+                           materiales=materiales, 
+                           tipos_lavabo=tipos_lavabo, 
+                           tipos_fregadero=tipos_fregadero,
+                           valvulas_logo=valvulas_logo,
+                           agujeros_grifo=agujeros_grifo,
+                           toalleros=toalleros,
+                           faldones=faldones,
+                           entrepanos=entrepanos)
 
 
 
@@ -1252,6 +1814,447 @@ def eliminar_producto(producto_id):
     
     return redirect(url_for('admin_products'))
 
+
+# Vista para administrar tipos de lavabos
+@app.route('/admin/tipos_lavabo', methods=['GET'])
+@login_required
+def admin_tipos_lavabo():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    tipos_lavabo = TipoLavabo.query.all()
+    return render_template('admin_tipo_lavabo.html', tipos_lavabo=tipos_lavabo)
+
+# Vista para agregar un nuevo tipo de lavabo
+@app.route('/admin/agregar_tipo_lavabo', methods=['GET', 'POST'])
+@login_required
+def agregar_tipo_lavabo():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        precio_adicional = float(request.form['precio_adicional'])
+
+        nuevo_tipo_lavabo = TipoLavabo(nombre=nombre, precio_adicional=precio_adicional)
+        db.session.add(nuevo_tipo_lavabo)
+        db.session.commit()
+
+        flash('Tipo de Lavabo agregado con éxito', 'success')
+        return redirect(url_for('admin_tipos_lavabo'))
+
+    return render_template('agregar_tipo_lavabo.html')
+
+# Vista para administrar tipos de fregaderos
+@app.route('/admin/tipos_fregadero', methods=['GET'])
+@login_required
+def admin_tipos_fregadero():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    tipos_fregadero = TipoFregadero.query.all()
+    return render_template('admin_tipo_fregadero.html', tipos_fregadero=tipos_fregadero)
+
+# Vista para agregar un nuevo tipo de fregadero
+@app.route('/admin/agregar_tipo_fregadero', methods=['GET', 'POST'])
+@login_required
+def agregar_tipo_fregadero():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        precio_adicional = float(request.form['precio_adicional'])
+
+        nuevo_tipo_fregadero = TipoFregadero(nombre=nombre, precio_adicional=precio_adicional)
+        db.session.add(nuevo_tipo_fregadero)
+        db.session.commit()
+
+        flash('Tipo de Fregadero agregado con éxito', 'success')
+        return redirect(url_for('admin_tipos_fregadero'))
+
+    return render_template('agregar_tipo_fregadero.html')
+
+# Función para eliminar tipos de lavabos
+@app.route('/admin/eliminar_tipo_lavabo/<int:tipo_id>', methods=['POST'])
+@login_required
+def eliminar_tipo_lavabo(tipo_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    tipo_lavabo = TipoLavabo.query.get_or_404(tipo_id)
+    db.session.delete(tipo_lavabo)
+    db.session.commit()
+
+    flash('Tipo de Lavabo eliminado con éxito', 'success')
+    return redirect(url_for('admin_tipos_lavabo'))
+
+# Función para eliminar tipos de fregaderos
+@app.route('/admin/eliminar_tipo_fregadero/<int:tipo_id>', methods=['POST'])
+@login_required
+def eliminar_tipo_fregadero(tipo_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    tipo_fregadero = TipoFregadero.query.get_or_404(tipo_id)
+    db.session.delete(tipo_fregadero)
+    db.session.commit()
+
+    flash('Tipo de Fregadero eliminado con éxito', 'success')
+    return redirect(url_for('admin_tipos_fregadero'))
+
+@app.route('/admin/editar_tipo_lavabo/<int:tipo_id>', methods=['GET', 'POST'])
+@login_required
+def editar_tipo_lavabo(tipo_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    tipo_lavabo = TipoLavabo.query.get_or_404(tipo_id)
+
+    if request.method == 'POST':
+        tipo_lavabo.nombre = request.form['nombre']
+        tipo_lavabo.precio_adicional = float(request.form['precio_adicional'])
+        db.session.commit()
+
+        flash('Tipo de Lavabo actualizado con éxito', 'success')
+        return redirect(url_for('admin_tipos_lavabo'))
+
+    return render_template('editar_tipo_lavabo.html', tipo_lavabo=tipo_lavabo)
+
+@app.route('/admin/editar_tipo_fregadero/<int:tipo_id>', methods=['GET', 'POST'])
+@login_required
+def editar_tipo_fregadero(tipo_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    tipo_fregadero = TipoFregadero.query.get_or_404(tipo_id)
+
+    if request.method == 'POST':
+        tipo_fregadero.nombre = request.form['nombre']
+        tipo_fregadero.precio_adicional = float(request.form['precio_adicional'])
+        db.session.commit()
+
+        flash('Tipo de Fregadero actualizado con éxito', 'success')
+        return redirect(url_for('admin_tipos_fregadero'))
+
+    return render_template('editar_tipo_fregadero.html', tipo_fregadero=tipo_fregadero)
+
+
+@app.route('/admin/materiales')
+@login_required
+def admin_materiales():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+    materiales = MaterialEncimera.query.all()
+    return render_template('admin_materiales.html', materiales=materiales)
+
+@app.route('/admin/materiales/agregar', methods=['GET', 'POST'])
+@login_required
+def agregar_material():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        precio_por_m2 = float(request.form['precio_por_m2'])
+        
+        nuevo_material = MaterialEncimera(nombre=nombre, precio_por_m2=precio_por_m2)
+        db.session.add(nuevo_material)
+        db.session.commit()
+        flash('Material agregado con éxito', 'success')
+        return redirect(url_for('admin_materiales'))
+    
+    return render_template('agregar_material.html')
+
+@app.route('/admin/materiales/editar/<int:material_id>', methods=['GET', 'POST'])
+@login_required
+def editar_material(material_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+    
+    material = MaterialEncimera.query.get_or_404(material_id)
+    
+    if request.method == 'POST':
+        material.nombre = request.form['nombre']
+        material.precio_por_m2 = float(request.form['precio_por_m2'])
+        db.session.commit()
+        flash('Material actualizado con éxito', 'success')
+        return redirect(url_for('admin_materiales'))
+    
+    return render_template('editar_material.html', material=material)
+
+@app.route('/admin/materiales/eliminar/<int:material_id>', methods=['POST'])
+@login_required
+def eliminar_material(material_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+    
+    material = MaterialEncimera.query.get_or_404(material_id)
+    db.session.delete(material)
+    db.session.commit()
+    flash('Material eliminado con éxito', 'success')
+    return redirect(url_for('admin_materiales'))
+
+# Ruta para mostrar el panel de control de los campos de configuración
+@app.route('/admin/campos_configuracion')
+@login_required
+def admin_campos_configuracion():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+    
+    valvulas = ValvulaLogo.query.all()
+    agujeros = AgujeroGrifo.query.all()
+    toalleros = Toallero.query.all()
+    faldones = Faldon.query.all()
+    entrepanos = Entrepano.query.all()
+
+    return render_template('campos_configuracion.html', valvulas=valvulas, agujeros=agujeros, toalleros=toalleros, faldones=faldones, entrepanos=entrepanos)
+
+# CRUD para ValvulaLogo
+@app.route('/admin/agregar_valvula_logo', methods=['GET', 'POST'])
+@login_required
+def agregar_valvula_logo():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        precio_adicional = float(request.form['precio_adicional'])
+        valvula = ValvulaLogo(nombre=nombre, precio_adicional=precio_adicional)
+        db.session.add(valvula)
+        db.session.commit()
+        flash('Válvula con Logo agregada con éxito', 'success')
+        return redirect(url_for('admin_campos_configuracion'))
+
+    return render_template('agregar_valvula_logo.html')
+
+@app.route('/admin/editar_valvula_logo/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_valvula_logo(id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    valvula = ValvulaLogo.query.get_or_404(id)
+
+    if request.method == 'POST':
+        valvula.nombre = request.form['nombre']
+        valvula.precio_adicional = float(request.form['precio_adicional'])
+        db.session.commit()
+        flash('Válvula con Logo actualizada con éxito', 'success')
+        return redirect(url_for('admin_campos_configuracion'))
+
+    return render_template('editar_valvula_logo.html', valvula=valvula)
+
+@app.route('/admin/eliminar_valvula_logo/<int:id>', methods=['POST'])
+@login_required
+def eliminar_valvula_logo(id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    valvula = ValvulaLogo.query.get_or_404(id)
+    db.session.delete(valvula)
+    db.session.commit()
+    flash('Válvula con Logo eliminada con éxito', 'success')
+    return redirect(url_for('admin_campos_configuracion'))
+
+@app.route('/admin/agregar_agujero_grifo', methods=['GET', 'POST'])
+@login_required
+def agregar_agujero_grifo():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        precio_adicional = float(request.form['precio_adicional'])
+        agujero = AgujeroGrifo(nombre=nombre, precio_adicional=precio_adicional)
+        db.session.add(agujero)
+        db.session.commit()
+        flash('Agujero para Grifo agregado con éxito', 'success')
+        return redirect(url_for('admin_campos_configuracion'))
+
+    return render_template('agregar_agujero_grifo.html')
+
+
+@app.route('/admin/editar_agujero_grifo/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_agujero_grifo(id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    agujero = AgujeroGrifo.query.get_or_404(id)
+
+    if request.method == 'POST':
+        agujero.nombre = request.form['nombre']
+        agujero.precio_adicional = float(request.form['precio_adicional'])
+        db.session.commit()
+        flash('Agujero para Grifo actualizado con éxito', 'success')
+        return redirect(url_for('admin_campos_configuracion'))
+
+    return render_template('editar_agujero_grifo.html', agujero=agujero)
+
+
+@app.route('/admin/eliminar_agujero_grifo/<int:id>', methods=['POST'])
+@login_required
+def eliminar_agujero_grifo(id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    agujero = AgujeroGrifo.query.get_or_404(id)
+    db.session.delete(agujero)
+    db.session.commit()
+    flash('Agujero para Grifo eliminado con éxito', 'success')
+    return redirect(url_for('admin_campos_configuracion'))
+
+# CRUD for Toallero
+@app.route('/admin/agregar_toallero', methods=['GET', 'POST'])
+@login_required
+def agregar_toallero():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        posicion = request.form['posicion']
+        precio_adicional = float(request.form['precio_adicional'])
+        toallero = Toallero(posicion=posicion, precio_adicional=precio_adicional)
+        db.session.add(toallero)
+        db.session.commit()
+        flash('Toallero agregado con éxito', 'success')
+        return redirect(url_for('admin_campos_configuracion'))
+
+    return render_template('agregar_toallero.html')
+
+
+@app.route('/admin/editar_toallero/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_toallero(id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    toallero = Toallero.query.get_or_404(id)
+
+    if request.method == 'POST':
+        toallero.posicion = request.form['posicion']
+        toallero.precio_adicional = float(request.form['precio_adicional'])
+        db.session.commit()
+        flash('Toallero actualizado con éxito', 'success')
+        return redirect(url_for('admin_campos_configuracion'))
+
+    return render_template('editar_toallero.html', toallero=toallero)
+
+
+@app.route('/admin/eliminar_toallero/<int:id>', methods=['POST'])
+@login_required
+def eliminar_toallero(id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    toallero = Toallero.query.get_or_404(id)
+    db.session.delete(toallero)
+    db.session.commit()
+    flash('Toallero eliminado con éxito', 'success')
+    return redirect(url_for('admin_campos_configuracion'))
+
+# CRUD for Faldon
+@app.route('/admin/agregar_faldon', methods=['GET', 'POST'])
+@login_required
+def agregar_faldon():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        posicion = request.form['posicion']
+        medida = float(request.form['medida'])
+        precio_adicional = float(request.form['precio_adicional'])
+        faldon = Faldon(posicion=posicion, medida=medida, precio_adicional=precio_adicional)
+        db.session.add(faldon)
+        db.session.commit()
+        flash('Faldón agregado con éxito', 'success')
+        return redirect(url_for('admin_campos_configuracion'))
+
+    return render_template('agregar_faldon.html')
+
+
+@app.route('/admin/editar_faldon/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_faldon(id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    faldon = Faldon.query.get_or_404(id)
+
+    if request.method == 'POST':
+        faldon.posicion = request.form['posicion']
+        faldon.medida = float(request.form['medida'])
+        faldon.precio_adicional = float(request.form['precio_adicional'])
+        db.session.commit()
+        flash('Faldón actualizado con éxito', 'success')
+        return redirect(url_for('admin_campos_configuracion'))
+
+    return render_template('editar_faldon.html', faldon=faldon)
+
+
+@app.route('/admin/eliminar_faldon/<int:id>', methods=['POST'])
+@login_required
+def eliminar_faldon(id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    faldon = Faldon.query.get_or_404(id)
+    db.session.delete(faldon)
+    db.session.commit()
+    flash('Faldón eliminado con éxito', 'success')
+    return redirect(url_for('admin_campos_configuracion'))
+
+# CRUD for Entrepano
+@app.route('/admin/agregar_entrepano', methods=['GET', 'POST'])
+@login_required
+def agregar_entrepano():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        tipo = request.form['tipo']
+        medida = float(request.form['medida'])
+        precio_adicional = float(request.form['precio_adicional'])
+        entrepano = Entrepano(tipo=tipo, medida=medida, precio_adicional=precio_adicional)
+        db.session.add(entrepano)
+        db.session.commit()
+        flash('Entrepano agregado con éxito', 'success')
+        return redirect(url_for('admin_campos_configuracion'))
+
+    return render_template('agregar_entrepano.html')
+
+
+@app.route('/admin/editar_entrepano/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_entrepano(id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    entrepano = Entrepano.query.get_or_404(id)
+
+    if request.method == 'POST':
+        entrepano.tipo = request.form['tipo']
+        entrepano.medida = float(request.form['medida'])
+        entrepano.precio_adicional = float(request.form['precio_adicional'])
+        db.session.commit()
+        flash('Entrepano actualizado con éxito', 'success')
+        return redirect(url_for('admin_campos_configuracion'))
+
+    return render_template('editar_entrepano.html', entrepano=entrepano)
+
+
+@app.route('/admin/eliminar_entrepano/<int:id>', methods=['POST'])
+@login_required
+def eliminar_entrepano(id):
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    entrepano = Entrepano.query.get_or_404(id)
+    db.session.delete(entrepano)
+    db.session.commit()
+    flash('Entrepano eliminado con éxito', 'success')
+    return redirect(url_for('admin_campos_configuracion'))
 
 @app.route('/admin/ver_pedidos')
 @login_required
@@ -1406,6 +2409,27 @@ def admin_settings():
     return render_template('admin_settings.html')
 
 
+@app.route('/resend_confirmation', methods=['POST'])
+def resend_confirmation():
+    email = request.form['email']
+    temp_user = TempUsuario.query.filter_by(email=email).first()
+    
+    if temp_user:
+        try:
+            # Generar el token de confirmación y enviar el correo
+            token = generate_confirmation_token(temp_user.email)
+            confirm_url = url_for('confirm_email', token=token, _external=True)
+            html_content = render_template('email_confirmation.html', confirm_url=confirm_url)
+            send_email(temp_user.email, 'Reenvío de confirmación de correo electrónico', html_content)
+            
+            flash('Se ha reenviado el correo de confirmación. Por favor, revisa tu bandeja de entrada o la carpeta de spam.', 'success')
+        except Exception as e:
+            flash(f'Error al reenviar el correo de confirmación: {str(e)}', 'danger')
+    else:
+        flash('No se encontró un usuario con ese correo electrónico.', 'danger')
+    
+    return redirect(url_for('login'))
+
 
 
 @app.route('/reset_password', methods=['GET', 'POST'])
@@ -1543,7 +2567,7 @@ def confirm_email(token):
     if temp_user:
         try:
             # Crear el usuario en la tabla principal
-            user = Usuario(nombre=temp_user.nombre, email=temp_user.email, password_hash=temp_user.password_hash)
+            user = Usuario(nombre=temp_user.nombre, email=temp_user.email, password_hash=temp_user.password_hash,is_confirmed=True)
             db.session.add(user)
             db.session.flush()  # Obtener el ID del usuario antes de hacer commit
             

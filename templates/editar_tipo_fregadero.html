@@ -1,0 +1,19 @@
+{% extends 'admin_base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Editar Tipo de Fregadero</h2>
+    <form action="{{ url_for('editar_tipo_fregadero', tipo_id=tipo_fregadero.id) }}" method="POST">
+        <div class="form-group">
+            <label for="nombre">Nombre del Tipo de Fregadero</label>
+            <input type="text" class="form-control" id="nombre" name="nombre" value="{{ tipo_fregadero.nombre }}" required>
+        </div>
+        <div class="form-group">
+            <label for="precio_adicional">Precio Adicional</label>
+            <input type="number" class="form-control" id="precio_adicional" name="precio_adicional" step="0.01" value="{{ tipo_fregadero.precio_adicional }}" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        <a href="{{ url_for('admin_tipos_fregadero') }}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

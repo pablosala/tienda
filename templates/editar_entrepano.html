@@ -1,0 +1,25 @@
+{% extends 'admin_base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Editar Entrepano</h2>
+    <form action="{{ url_for('editar_entrepano', id=entrepano.id) }}" method="POST">
+        <div class="form-group">
+            <label for="tipo">Tipo</label>
+            <select class="form-control" id="tipo" name="tipo" required>
+                <option value="RECTO" {% if entrepano.tipo == 'RECTO' %}selected{% endif %}>Recto</option>
+                <option value="SANITARIO" {% if entrepano.tipo == 'SANITARIO' %}selected{% endif %}>Sanitario</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="medida">Medida (mm)</label>
+            <input type="number" class="form-control" id="medida" name="medida" value="{{ entrepano.medida }}" step="0.01" required>
+        </div>
+        <div class="form-group">
+            <label for="precio_adicional">Precio Adicional</label>
+            <input type="number" class="form-control" id="precio_adicional" name="precio_adicional" value="{{ entrepano.precio_adicional }}" step="0.01" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+    </form>
+</div>
+{% endblock %}

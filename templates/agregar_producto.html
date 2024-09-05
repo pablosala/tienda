@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container mt-5">
     <h2>Agregar Producto</h2>
-    <form action="{{ url_for('agregar_producto') }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ url_for('agregar_producto') }}" method="POST" enctype="multipart/form-data" id="producto-form">
         <!-- Campos del producto -->
         <div class="form-group">
             <label for="nombre">Nombre</label>
@@ -14,8 +14,8 @@
             <textarea class="form-control" id="descripcion" name="descripcion" required></textarea>
         </div>
         <div class="form-group">
-            <label for="precio">Precio</label>
-            <input type="number" class="form-control" id="precio" name="precio" step="0.01" required>
+            <label for="precio_base">Precio Base</label>
+            <input type="number" class="form-control" id="precio_base" name="precio" step="0.01" required>
         </div>
         <div class="form-group">
             <label for="stock">Stock</label>
@@ -29,6 +29,17 @@
                 {% endfor %}
             </select>
         </div>
+
+        <!-- Selección del tipo de producto -->
+        <div class="form-group">
+            <label for="tipo_producto">Tipo de Producto</label>
+            <select class="form-control" id="tipo_producto" name="tipo_producto" onchange="mostrarOpciones()">
+                <option value="">Seleccione...</option>
+                <option value="encimera">Encimera</option>
+                <option value="lavabo">Lavabo</option>
+            </select>
+        </div>
+
         <!-- Campos para especificaciones -->
         <div class="form-group">
             <label for="especificaciones">Especificaciones</label>
@@ -37,16 +48,19 @@
             </div>
             <button type="button" class="btn btn-secondary" onclick="agregarEspecificacion()">Agregar otra especificación</button>
         </div>
+        
         <!-- Campo para imagen -->
         <div class="form-group">
             <label for="imagen">Imagen</label>
             <input type="file" class="form-control-file" id="imagen" name="imagen" required>
         </div>
+
         <!-- Campo para modelo 3D -->
         <div class="form-group">
             <label for="modelo_3d">Modelo 3D</label>
             <input type="file" class="form-control-file" id="modelo_3d" name="modelo_3d">
         </div>
+
         <!-- Campos para descuento -->
         <div class="form-group">
             <label for="descuento">Descuento (%)</label>
@@ -56,11 +70,172 @@
             <label for="fecha_fin_descuento">Fecha de Fin del Descuento</label>
             <input type="datetime-local" class="form-control" id="fecha_fin_descuento" name="fecha_fin_descuento">
         </div>
+
+        <!-- Opciones adicionales para encimeras -->
+        <div id="opciones_encimera" style="display: none;">
+            <hr>
+            <h4>Configuración de Encimera</h4>
+            <div class="form-group">
+                <label for="material_encimera">Material</label>
+                <select class="form-control" id="material_encimera" name="material_id" onchange="updatePrice()">
+                    {% for material in materiales %}
+                    <option value="{{ material.id }}" data-precio="{{ material.precio_por_m2 }}">{{ material.nombre }} - {{ material.precio_por_m2 }}€/m²</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="grosor">Grosor (mm)</label>
+                <input type="number" class="form-control" id="grosor" name="grosor" step="0.01" onchange="updatePrice()">
+            </div>
+            <div class="form-group">
+                <label for="valvula_logo">Válvula con logo</label>
+                <select class="form-control" id="valvula_logo" name="valvula_logo_id" onchange="updatePrice()">
+                    {% for valvula in valvulas_logo %}
+                    <option value="{{ valvula.id }}" data-precio="{{ valvula.precio_adicional }}">{{ valvula.nombre }} - {{ valvula.precio_adicional }}€</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="agujero_grifo">Agujero para grifo</label>
+                <select class="form-control" id="agujero_grifo" name="agujero_grifo_id" onchange="updatePrice()">
+                    {% for agujero in agujeros_grifo %}
+                    <option value="{{ agujero.id }}" data-precio="{{ agujero.precio_adicional }}">{{ agujero.nombre }} - {{ agujero.precio_adicional }}€</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="toallero">Toallero</label>
+                <select class="form-control" id="toallero" name="toallero_ids" multiple>
+                    {% for toallero in toalleros %}
+                    <option value="{{ toallero.id }}" data-precio="{{ toallero.precio_adicional }}">{{ toallero.posicion }} - {{ toallero.precio_adicional }}€</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="faldon">Faldón</label>
+                <select class="form-control" id="faldon" name="faldon_ids" multiple>
+                    {% for faldon in faldones %}
+                    <option value="{{ faldon.id }}" data-precio="{{ faldon.precio_adicional }}">{{ faldon.posicion }} - {{ faldon.precio_adicional }}€</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="medida_faldon">Medida del Faldón (mm)</label>
+                <input type="number" class="form-control" id="medida_faldon" name="medida_faldon" step="0.01" onchange="updatePrice()">
+            </div>
+        </div>
+
+        <!-- Opciones adicionales para lavabos -->
+        <div id="opciones_lavabo" style="display: none;">
+            <hr>
+                <!-- Campos para Lavabos -->
+                <h4>Configuración de Lavabo</h4>
+                <div class="form-group">
+                    <label for="material_lavabo">Material:</label>
+                    <select class="form-control" id="material_lavabo" name="material_id_lavabo" onchange="updatePrice()">
+                        {% for material in materiales %}
+                        <option value="{{ material.id }}" data-price="{{ material.precio_por_m2 }}">{{ material.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="tipo-lavabo">Tipo de Lavabo:</label>
+                    <select class="form-control" id="tipo-lavabo" name="tipo_lavabo_id" onchange="updatePrice()">
+                        {% for lavabo in tipos_lavabo %}
+                        <option value="{{ lavabo.id }}" data-price="{{ lavabo.precio_adicional }}">{{ lavabo.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="largo_lavabo">Largo del lavabo (mm):</label>
+                    <input type="number" class="form-control" id="largo_lavabo" name="largo_lavabo" step="0.01" required onchange="updatePrice()">
+                </div>
+                <div class="form-group">
+                    <label for="ancho_lavabo">Ancho del lavabo (mm):</label>
+                    <input type="number" class="form-control" id="ancho_lavabo" name="ancho_lavabo" step="0.01" required onchange="updatePrice()">
+                </div>
+                <div class="form-group">
+                    <label for="valvula-logo">Válvula:</label>
+                    <select class="form-control" id="valvula-logo" name="valvula_logo_id_lavabo" onchange="updatePrice()">
+                        <option value="" data-price="0">No</option> <!-- Cadena vacía -->
+                        {% for valvula in valvulas_logo %}
+                        <option value="{{ valvula.id }}" data-price="{{ valvula.precio_adicional }}">{{ valvula.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="agujero-grifo">Agujero de Grifo:</label>
+                    <select class="form-control" id="agujero-grifo" name="agujero_grifo_id_lavabo" onchange="updatePrice()">
+                        <option value="" data-price="0">No</option> <!-- Cadena vacía -->
+                        {% for agujero in agujeros_grifo %}
+                        <option value="{{ agujero.id }}" data-price="{{ agujero.precio_adicional }}">{{ agujero.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="toallero_lavabo">Posición del toallero:</label>
+                    <select class="form-control" id="toallero_lavabo" name="toallero_lavabo" onchange="updatePrice()">
+                        <option value="No" data-price="0">No</option>
+                        {% for toallero in toalleros %}
+                        <option value="{{ toallero.id }}" data-price="{{ toallero.precio_adicional }}">{{ toallero.posicion }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group form-check">
+                    <input type="checkbox" class="form-check-input" id="faldon_lavabo" name="faldon_lavabo" onchange="toggleFaldonOptionsLavabo()" data-price="{{ faldon_precio }}">
+                    <label class="form-check-label" for="faldon_lavabo">Faldón</label>
+                </div>
+
+                <!-- Opciones adicionales para faldón -->
+                <div id="faldon-options-lavabo" style="display: none;">
+                    <div class="form-group">
+                        <label for="faldon_lados_lavabo">Seleccione los lados donde desea el faldón:</label>
+                        <select class="form-control" id="faldon_lados_lavabo" name="faldon_lados_lavabo[]" multiple onchange="updatePrice()">
+                            <option value="IZQUIERDO">Izquierda</option>
+                            <option value="FRONTAL">Frontal</option>
+                            <option value="DERECHO">Derecha</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="medida_faldon_lavabo">Medida del faldón (mm):</label>
+                        <input type="number" class="form-control" id="medida_faldon_lavabo" name="medida_faldon_lavabo" step="0.01" onchange="updatePrice()">
+                    </div>
+                </div>
+        </div>
+
+        <div class="mt-3">
+            <div id="dynamic-price" class="price-container">
+                <!-- Mostrar el precio calculado -->
+                <span class="discounted-price">0.00 €</span>
+            </div>
+        </div>
+
+
         <button type="submit" class="btn btn-primary">Agregar Producto</button>
+
+        <pre>{{ request.form }}</pre>
     </form>
 </div>
 
 <script>
+function mostrarOpciones() {
+    var tipoProducto = document.getElementById('tipo_producto').value;
+    var opcionesEncimera = document.getElementById('opciones_encimera');
+    var opcionesLavabo = document.getElementById('opciones_lavabo');
+
+    if (tipoProducto === 'encimera') {
+        opcionesEncimera.style.display = 'block';
+        opcionesLavabo.style.display = 'none';
+    } else if (tipoProducto === 'lavabo') {
+        opcionesEncimera.style.display = 'none';
+        opcionesLavabo.style.display = 'block';
+    } else {
+        opcionesEncimera.style.display = 'none';
+        opcionesLavabo.style.display = 'none';
+    }
+}
+
 function agregarEspecificacion() {
     var container = document.getElementById('especificaciones-container');
     var input = document.createElement('input');
@@ -69,5 +244,139 @@ function agregarEspecificacion() {
     input.name = 'especificaciones';
     container.appendChild(input);
 }
+
+function toggleFaldonOptions() {
+    const faldonCheckbox = document.getElementById('faldon');
+    const faldonOptions = document.getElementById('faldon-options');
+    
+    if (faldonCheckbox.checked) {
+        faldonOptions.style.display = 'block';
+    } else {
+        faldonOptions.style.display = 'none';
+    }
+}
+
+function toggleFaldonOptionsLavabo() {
+    const faldonCheckbox = document.getElementById('faldon_lavabo');
+    const faldonOptions = document.getElementById('faldon-options-lavabo');
+    
+    if (faldonCheckbox.checked) {
+        faldonOptions.style.display = 'block';
+    } else {
+        faldonOptions.style.display = 'none';
+    }
+}
+
+// Asegúrate de que la función se ejecuta al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    toggleFaldonOptions(); // Inicializa la visibilidad al cargar la página
+    toggleFaldonOptionsLavabo();
+});
+
+// JavaScript para actualizar el precio dinámicamente
+function updatePrice() {
+    let basePrice = 0;
+    let preciopersonalizado = 0;
+
+    // Obtener el precio del material seleccionado para Lavabo
+    const materialLavaboSelect = document.getElementById('material_lavabo');
+    const materialLavaboPrice = materialLavaboSelect ? parseFloat(materialLavaboSelect.options[materialLavaboSelect.selectedIndex].getAttribute('data-price')) : 0;
+
+    // Obtener dimensiones del Lavabo
+    const largoLavabo = parseFloat(document.getElementById('largo_lavabo').value);
+    const anchoLavabo = parseFloat(document.getElementById('ancho_lavabo').value);
+
+    console.log("Largo Lavabo: ", largoLavabo);
+    console.log("Ancho Lavabo: ", anchoLavabo);
+    console.log("Material Lavabo Price: ", materialLavaboPrice);
+
+    // Calcular precio personalizado basado en las dimensiones y el precio del material del Lavabo
+    if (!isNaN(largoLavabo) && !isNaN(anchoLavabo) && !isNaN(materialLavaboPrice)) {
+        preciopersonalizado += (largoLavabo * anchoLavabo * materialLavaboPrice) / 1000000;
+    }
+
+    console.log("Precio Personalizado: ", preciopersonalizado);
+
+    // Cálculo del precio del faldón
+    const faldonCheckbox = document.getElementById('faldon_lavabo');
+    if (faldonCheckbox && faldonCheckbox.checked) {
+        const ladosLavaboSelect = document.getElementById('faldon_lados_lavabo');
+        const ladosLavaboSeleccionados = Array.from(ladosLavaboSelect.selectedOptions).map(option => option.value);
+        const medidaFaldonLavaboInput = parseFloat(document.getElementById('medida_faldon_lavabo').value) || 0;
+
+        let precioLados = 0;
+        let precioFrontal = 0;
+
+        // Calcular precio de los lados seleccionados (izquierda y derecha)
+        if (ladosLavaboSeleccionados.includes('IZQUIERDO') || ladosLavaboSeleccionados.includes('DERECHO')) {
+            precioLados = anchoLavabo * materialLavaboPrice * medidaFaldonLavaboInput / 1000000;
+            preciopersonalizado += precioLados * ladosLavaboSeleccionados.filter(lado => lado !== 'FRONTAL').length;
+        }
+
+        // Calcular precio del frontal si está seleccionado
+        if (ladosLavaboSeleccionados.includes('FRONTAL')) {
+            precioFrontal = largoLavabo * materialLavaboPrice * medidaFaldonLavaboInput / 1000000;
+            preciopersonalizado += precioFrontal;
+        }
+
+        console.log("Precio con Faldón (Lados): ", precioLados);
+        console.log("Precio con Faldón (Frontal): ", precioFrontal);
+        console.log("Precio con Faldón Total: ", preciopersonalizado);
+    }
+
+    // Añadir precio del toallero si se selecciona uno
+    const toalleroSelect = document.getElementById('toallero_lavabo');
+    if (toalleroSelect) {
+        const toalleroPrice = parseFloat(toalleroSelect.options[toalleroSelect.selectedIndex].getAttribute('data-price')) || 0;
+        preciopersonalizado += toalleroPrice;
+        console.log("Precio Toallero: ", toalleroPrice);
+    }
+
+    // Añadir precio del tipo de lavabo seleccionado
+    const tipoLavaboSelect = document.getElementById('tipo-lavabo');
+    if (tipoLavaboSelect) {
+        const tipoLavaboPrice = parseFloat(tipoLavaboSelect.options[tipoLavaboSelect.selectedIndex].getAttribute('data-price')) || 0;
+        preciopersonalizado += tipoLavaboPrice;
+        console.log("Precio Tipo de Lavabo: ", tipoLavaboPrice);
+    }
+
+    // Añadir precio de la válvula seleccionada
+    const valvulaSelect = document.getElementById('valvula-logo');
+    if (valvulaSelect) {
+        const valvulaPrice = parseFloat(valvulaSelect.options[valvulaSelect.selectedIndex].getAttribute('data-price')) || 0;
+        preciopersonalizado += valvulaPrice;
+        console.log("Precio Válvula: ", valvulaPrice);
+    }
+
+    // Añadir precio del agujero de grifo seleccionado
+    const agujeroGrifoSelect = document.getElementById('agujero-grifo');
+    if (agujeroGrifoSelect) {
+        const agujeroGrifoPrice = parseFloat(agujeroGrifoSelect.options[agujeroGrifoSelect.selectedIndex].getAttribute('data-price')) || 0;
+        preciopersonalizado += agujeroGrifoPrice;
+        console.log("Precio Agujero de Grifo: ", agujeroGrifoPrice);
+    }
+
+    // Actualizar el precio base con el precio personalizado calculado
+    document.getElementById('precio_base').value = preciopersonalizado.toFixed(2);
+
+    // Actualizar el precio dinámico en la página
+    document.querySelector('#dynamic-price .discounted-price').textContent = preciopersonalizado.toFixed(2) + ' €';
+
+    // Mostrar el precio personalizado en consola
+    console.log("Precio Total Personalizado: ", preciopersonalizado.toFixed(2) + ' €');
+}
+
+// Event listeners para actualizar el precio total cuando cambien las opciones
+document.querySelectorAll('select').forEach(select => {
+    select.addEventListener('change', updatePrice);
+});
+document.getElementById('largo_lavabo').addEventListener('input', updatePrice);
+document.getElementById('ancho_lavabo').addEventListener('input', updatePrice);
+document.getElementById('medida_faldon_lavabo')?.addEventListener('input', updatePrice);
+
+// Inicializar el precio total al cargar la página
+document.addEventListener('DOMContentLoaded', updatePrice);
+
 </script>
+
 {% endblock %}

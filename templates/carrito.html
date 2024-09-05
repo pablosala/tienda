@@ -48,14 +48,30 @@
                             </form>
                         </td>
                         <td>
-                            {% if item.producto.descuento > 0 %}
-                                <span class="text-success font-weight-bold">{{ item.producto.precio }}€</span>
-                                <span class="text-muted"><del>{{ item.producto.precio_original }}€</del></span>
+                            {% if item.personalizaciones %}
+                                {% for personalizacion in item.personalizaciones %}
+                                    <span>{{ personalizacion.precio_personalizado }}€</span>
+                                    {% if not loop.last %}<br>{% endif %}
+                                {% endfor %}
                             {% else %}
-                                <span>{{ item.producto.precio }}€</span>
+                                {% if item.producto.descuento > 0 %}
+                                    <span class="text-success font-weight-bold">{{ item.producto.precio }}€</span>
+                                    <span class="text-muted"><del>{{ item.producto.precio_original }}€</del></span>
+                                {% else %}
+                                    <span>{{ item.producto.precio }}€</span>
+                                {% endif %}
                             {% endif %}
                         </td>
-                        <td>{{ item.cantidad * item.producto.precio }}€</td>
+                        <td>
+                            {% if item.personalizaciones %}
+                                {% for personalizacion in item.personalizaciones %}
+                                    <span>{{ item.cantidad * personalizacion.precio_personalizado }}€</span>
+                                    {% if not loop.last %}<br>{% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span>{{ item.cantidad * item.producto.precio }}€</span>
+                            {% endif %}
+                        </td>
                         <td>
                             <form action="{{ url_for('eliminar_del_carrito') }}" method="POST">
                                 <input type="hidden" name="producto_id" value="{{ item.producto.id }}">

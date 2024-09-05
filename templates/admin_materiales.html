@@ -1,0 +1,31 @@
+{% extends 'admin_base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Materiales de Encimera</h2>
+    <a href="{{ url_for('agregar_material') }}" class="btn btn-primary mb-3">Nuevo Material</a>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Precio por m²</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for material in materiales %}
+            <tr>
+                <td>{{ material.nombre }}</td>
+                <td>{{ material.precio_por_m2 }}</td>
+                <td>
+                    <a href="{{ url_for('editar_material', material_id=material.id) }}" class="btn btn-warning btn-sm">Editar</a>
+                    <form action="{{ url_for('eliminar_material', material_id=material.id) }}" method="post" style="display:inline-block;">
+                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

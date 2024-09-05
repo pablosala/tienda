@@ -2,10 +2,28 @@
 <html>
 <head>
     <title>Espera la Confirmación</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript">
+        function checkConfirmation() {
+            $.post("{{ url_for('check_confirmation_status') }}", {
+                email: "{{ email }}"
+            }).done(function(data) {
+                if (data.confirmed) {
+                    window.location.href = "{{ url_for('login') }}";
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            // Revisar cada 5 segundos si la cuenta ha sido confirmada
+            setInterval(checkConfirmation, 5000);
+        });
+    </script>
 </head>
 <body>
     <h2>Espera la Confirmación</h2>
     <p>Se ha enviado un correo electrónico a tu dirección para confirmar tu cuenta. Por favor, verifica tu correo y sigue las instrucciones.</p>
     <p>Si no ves el correo en tu bandeja de entrada, revisa la carpeta de spam o correo no deseado.</p>
+    <p>Esta página se redirigirá automáticamente una vez que confirmes tu correo.</p>
 </body>
 </html>
